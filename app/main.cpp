@@ -34,7 +34,7 @@ int main(int, char**)
         return 1;
 
     // Create window with graphics context
-    GLFWwindow* window = glfwCreateWindow(1280, 720, "DeGiro.h test application", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow(1440, 900, "DeGiro.h test application", nullptr, nullptr);
     if (window == nullptr)
         return 1;
     glfwMakeContextCurrent(window);
@@ -45,8 +45,7 @@ int main(int, char**)
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
-
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     ImPlot::CreateContext();
 
     // Setup Dear ImGui style
@@ -113,9 +112,15 @@ int main(int, char**)
 //      | |__| (_) | (_| | | | | |
 //      |_____\___/ \__, |_|_| |_|
 //                  |___/         
-        {
-            ImGui::Begin("Log in");
 
+        if (!dg.logged_in && glfwGetTime() > 0.5) { ImGui::OpenPopup("Login"); }
+
+        // Always center this window when appearing
+        ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+        ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+
+        if (ImGui::BeginPopupModal("Login", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+        {
             #ifdef USERNAME
                 static char username[64] = USERNAME;
             #else
@@ -129,7 +134,7 @@ int main(int, char**)
                 static char password[64] = "";
             #endif
             ImGui::InputTextWithHint("password", "******", password, IM_ARRAYSIZE(password), ImGuiInputTextFlags_Password);
-            
+
             static char totp[7] = "";
             ImGui::InputTextWithHint("one-time password", "123456", totp, IM_ARRAYSIZE(totp));
 
@@ -148,7 +153,8 @@ int main(int, char**)
                 }
             }
 
-            ImGui::End();
+            if (dg.logged_in) { ImGui::CloseCurrentPopup(); }
+            ImGui::EndPopup();
         }
 
 //          _                             _     _        __       
@@ -423,7 +429,10 @@ int main(int, char**)
             }
 
             {
-                ImPlot::BeginPlot("Price history");
+                char plot_title[64];
+                if (history.currency) { snprintf(plot_title, sizeof(plot_title), "Price [%s]", history.currency); }
+                else {                  snprintf(plot_title, sizeof(plot_title), "Price"); }
+                ImPlot::BeginPlot(plot_title);
 
                 if (history.chart.n_points > 0) {
                     float min_val = *(history.chart.prices);
@@ -433,7 +442,7 @@ int main(int, char**)
                         if (history.chart.prices[i] > max_val) max_val = history.chart.prices[i];
                     }
                     float padding = (max_val - min_val) * 0.1;
-                    ImPlot::SetupAxes("Days", "Price");
+                    
                     ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
                     ImPlot::GetStyle().Use24HourClock = true;
                     ImPlot::SetupAxesLimits(history.chart.timestamps[0], history.chart.timestamps[history.chart.n_points - 1], min_val - padding, max_val + padding, ImPlotCond_Always);

@@ -13,14 +13,27 @@ bool dg__parse_price_response_time_data(cJSON *item, dg_price_history *result)
         nob_log(NOB_WARNING, "Encountered \"times\" entry as non-string type");
         return false;
     }
-    const char *start_time = cJSON_GetStringValue(start_time_obj); // e.g. 2025-09-30T00:00:00/PT1M
-    // const char *human_readable_time = "2025-09-30 14:30:00"; // Example timestamp
+    const char *start_time = cJSON_GetStringValue(start_time_obj); 
+    // e.g. "2025-09-30T00:00:00/PT1M" when resolution is smaller than a day
+    // or   "2024-10-03/P1D" otherwise
+    // Determine which is encountered by checking for 'T' on index 10
+
     struct tm tm = {0};
     char *resolution = (char *)malloc(sizeof(char) * 8);
-    sscanf(start_time, "%d-%d-%dT%d:%d:%d/P%s",
-            &tm.tm_year, &tm.tm_mon, &tm.tm_mday,
-            &tm.tm_hour, &tm.tm_min, &tm.tm_sec,
-            resolution);
+
+    if (start_time[10] == 'T') { // e.g. 2025-09-30T00:00:00/PT1M
+        sscanf(start_time, "%d-%d-%dT%d:%d:%d/P%s",
+        &tm.tm_year, &tm.tm_mon, &tm.tm_mday,
+        &tm.tm_hour, &tm.tm_min, &tm.tm_sec,
+        resolution);
+    } else { // e.g. 2025-09-30/P1D
+        sscanf(start_time, "%d-%d-%d/P%s",
+        &tm.tm_year, &tm.tm_mon, &tm.tm_mday,
+        resolution);
+        tm.tm_hour = 0;
+        tm.tm_min = 0;
+        tm.tm_sec = 0;
+    }
 
     // Convert tm to unix timestamp
     tm.tm_year -= 1900;
