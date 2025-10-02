@@ -1,0 +1,8 @@
+/out
+/.vscode
+imgui.ini
+CMakePresets.json
+secrets.h
+*.json
+/ref
+/build
