@@ -379,6 +379,7 @@ bool dg__get_price(dg_price_history *result, dg_price_plot_options opts)
     }
     
     nob_log(NOB_INFO, "Getting price info with the following options:");
+    nob_log(NOB_INFO, " - Product: %s", opts.product->name);
     nob_log(NOB_INFO, " - Period: %s", opts.period);
     nob_log(NOB_INFO, " - Resolution: %s", resolution);
 

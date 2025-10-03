@@ -30,9 +30,6 @@ bool dg__parse_price_response_time_data(cJSON *item, dg_price_history *result)
         sscanf(start_time, "%d-%d-%d/P%s",
         &tm.tm_year, &tm.tm_mon, &tm.tm_mday,
         resolution);
-        tm.tm_hour = 0;
-        tm.tm_min = 0;
-        tm.tm_sec = 0;
     }
 
     // Convert tm to unix timestamp
@@ -45,8 +42,6 @@ bool dg__parse_price_response_time_data(cJSON *item, dg_price_history *result)
         nob_log(NOB_ERROR, "Failed to convert to Unix timestamp");
         return false;
     }
-
-    nob_log(NOB_WARNING, "Start time timestamp: %ld, resolution: %s", (long)start_time_unix, resolution);
 
     time_t time_resolution = 0;
     if (strcmp(resolution, "1D") == 0)        time_resolution = 60*60*24;
