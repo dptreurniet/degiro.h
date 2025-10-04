@@ -6,7 +6,7 @@
 #include "products.h"
 #include "account.h"
 #include "portfolio.h"
-#include "prices.h"
+#include "chart.h"
 
 // State struct exposed to end-user
 typedef struct degiro {
@@ -22,7 +22,7 @@ bool dg_login(degiro *dg, const char *username, const char *password, const char
 bool dg_get_portfolio(degiro *dg);
 bool dg_get_transactions(degiro *dg, dg_get_transactions_options options, dg_transactions *transactions);
 
-bool dg_get_price(dg_price_history *result, dg_price_plot_options opts);
+bool dg_get_product_chart(dg_product_chart *result, dg_product_chart_options opts);
 
 void dg_cleanup();
 

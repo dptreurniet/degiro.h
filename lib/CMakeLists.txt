@@ -6,6 +6,7 @@ find_package(cJSON CONFIG REQUIRED)
 
 set(SOURCES
     public/src/degiro.c
+    public/src/chart.c
 
     private/src/degiro_main.c
     private/src/degiro_curl.c

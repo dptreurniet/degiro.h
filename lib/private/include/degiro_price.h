@@ -2,6 +2,6 @@
 
 #include <stdbool.h>
 #include <cjson/cJSON.h>
-#include "prices.h"
+#include "chart.h"
 
-bool dg__parse_price_response(cJSON *data, dg_price_history* result);
+bool dg__parse_chart_response(cJSON *data, dg_product_chart* result);

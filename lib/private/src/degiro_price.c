@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include "utils.h"
 
-bool dg__parse_price_response_time_data(cJSON *item, dg_price_history *result)
+bool dg__parse_chart_response_time_data(cJSON *item, dg_product_chart *result)
 {
     // Get series start time
     cJSON *start_time_obj = cJSON_GetObjectItem(item, "times");
@@ -81,7 +81,7 @@ bool dg__parse_price_response_time_data(cJSON *item, dg_price_history *result)
     return true;
 }
 
-bool dg__parse_price_response_object_data(cJSON *item, dg_price_history *result)
+bool dg__parse_chart_response_object_data(cJSON *item, dg_product_chart *result)
 {
     cJSON *data = cJSON_GetObjectItem(item, "data");
     if (!cJSON_IsObject(data))
@@ -97,7 +97,7 @@ bool dg__parse_price_response_object_data(cJSON *item, dg_price_history *result)
     return true;
 }
 
-bool dg__parse_price_response(cJSON *data, dg_price_history *result)
+bool dg__parse_chart_response(cJSON *data, dg_product_chart *result)
 {
     cJSON *series = cJSON_GetObjectItem(data, "series");
 
@@ -124,14 +124,14 @@ bool dg__parse_price_response(cJSON *data, dg_price_history *result)
 
         if (strcmp(cJSON_GetStringValue(type), "time") == 0)
         {
-            if(!dg__parse_price_response_time_data(item, result)) {
+            if(!dg__parse_chart_response_time_data(item, result)) {
                 nob_log(NOB_ERROR, "Failed to parse time data in response");
                 return false;
             } else { time_data_parsed = true; }
         }
         else if (strcmp(cJSON_GetStringValue(type), "object") == 0)
         {
-            if(!dg__parse_price_response_object_data(item, result)) {
+            if(!dg__parse_chart_response_object_data(item, result)) {
                 nob_log(NOB_ERROR, "Failed to parse object data in response");
                 return false;
             } else { object_parsed = true; }

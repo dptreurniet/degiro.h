@@ -44,9 +44,9 @@ const dg_product *dg_get_product_by_id(degiro *dg, int id)
     return dg__get_product_from_library_by_id(&dg->products, id);
 }
 
-bool dg_get_price(dg_price_history *result, dg_price_plot_options opts)
+bool dg_get_product_chart(dg_product_chart *result, dg_product_chart_options opts)
 {
-    return dg__get_price(result, opts);
+    return dg__get_product_chart(result, opts);
 }
 
 void dg_cleanup()

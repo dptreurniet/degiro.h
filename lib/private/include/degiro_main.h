@@ -27,7 +27,7 @@ bool dg__get_transactions(degiro *dg, dg_get_transactions_options options, dg_da
 bool dg__get_account_config();
 bool dg__get_account_data();
 bool dg__get_products_info(degiro *dg, int *ids, size_t n_ids, dg_products *products);
-bool dg__get_price(dg_price_history *history, dg_price_plot_options opts);
+bool dg__get_product_chart(dg_product_chart *history, dg_product_chart_options opts);
 
 
 void dg__cleanup();

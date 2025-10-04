@@ -49,10 +49,14 @@ void render_login_popup()
 #endif
         ImGui::InputTextWithHint("password", "******", password, IM_ARRAYSIZE(password), ImGuiInputTextFlags_Password);
 
+        if (glfwGetTime() < 0.6)
+        {
+            ImGui::SetKeyboardFocusHere();
+        }
         static char totp[7] = "";
         ImGui::InputTextWithHint("one-time password", "123456", totp, IM_ARRAYSIZE(totp));
 
-        if (ImGui::Button("Login"))
+        if (ImGui::Button("Login") || ImGui::IsKeyPressed(ImGuiKey_Enter))
         {
             if (!dg_login(&dg, username, password, totp))
             {
@@ -64,7 +68,7 @@ void render_login_popup()
                 memset(&password, '\0', sizeof(password));
                 memset(&totp, '\0', sizeof(totp));
 
-                if (!dg_get_portfolio(&dg))
+                if (!dg_get_portfolio(&dg)) 
                 {
                     fprintf(stderr, "Failed to get portfolio\n");
                 }
@@ -200,20 +204,100 @@ void render_portfolio()
     // ImGui::End();
 }
 
-void render_products()
+void render_product_chart(dg_product_chart chart)
 {
-    // ImGui::Begin("Products");
-
-    if (dg.products.count == 0)
+    char plot_title[64];
+    if (chart.currency)
     {
-        ImGui::Text("No product info loaded yet...");
+        snprintf(plot_title, sizeof(plot_title), "Price [%s]", chart.currency);
+    }
+    else
+    {
+        snprintf(plot_title, sizeof(plot_title), "Price");
     }
 
-    for (auto i = 0; i < dg.products.count; i++)
+    if (ImPlot::BeginPlot(plot_title, ImGui::GetContentRegionAvail(), ImPlotFlags_NoLegend))
     {
-        auto product = dg.products.items[i];
-        if (ImGui::TreeNode(product.name))
+        if (chart.chart.n_points > 0)
         {
+            ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
+            ImPlot::GetStyle().Use24HourClock = true;
+
+            float padding = (chart.high_price - chart.low_price) * 0.1;
+            ImPlot::SetupAxesLimits(chart.chart.timestamps[0], chart.chart.timestamps[chart.chart.n_points - 1], chart.low_price - padding, chart.high_price + padding, ImPlotCond_Always);
+
+            // Plot lines
+            ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.25f);
+            ImPlot::PlotShaded(chart.product.name, chart.chart.timestamps, chart.chart.prices, chart.chart.n_points, -INFINITY);
+            ImPlot::PlotLine(chart.product.name, chart.chart.timestamps, chart.chart.prices, chart.chart.n_points);
+
+            // Plot tags
+            ImVec4 color;
+
+            color = ImVec4(0, 1, 0, 1);
+            ImPlot::TagY(chart.high_price, color);
+            ImPlot::PushStyleColor(ImPlotCol_Line, color);
+            ImPlot::PlotInfLines("", &chart.high_price, 1, ImPlotInfLinesFlags_Horizontal);
+            ImPlot::PopStyleColor();
+
+            color = ImVec4(1, 0, 0, 1);
+            ImPlot::TagY(chart.low_price, color);
+            ImPlot::PushStyleColor(ImPlotCol_Line, color);
+            ImPlot::PlotInfLines("", &chart.low_price, 1, ImPlotInfLinesFlags_Horizontal);
+            ImPlot::PopStyleColor();
+        }
+        ImPlot::EndPlot();
+    }
+}
+
+bool operator==(const dg_product_chart_options &lhs, const dg_product_chart_options &rhs)
+{
+    if (lhs.product.id != rhs.product.id)
+        return false;
+    if (lhs.period != rhs.period)
+        return false;
+    return true;
+}
+bool operator!=(const dg_product_chart_options &lhs, const dg_product_chart_options &rhs)
+{
+    if (lhs == rhs)
+        return false;
+    return true;
+}
+
+void render_products()
+{
+    static int selected_ix = -1;
+
+    { // -------- Products --------
+        ImGui::BeginChild("Products", ImVec2(ImGui::GetContentRegionAvail().x * 0.5f, ImGui::GetContentRegionAvail().y), ImGuiChildFlags_None, ImGuiWindowFlags_None);
+        if (dg.products.count == 0)
+        {
+            ImGui::Text("No products loaded yet...");
+        }
+
+        for (auto i = 0; i < dg.products.count; i++)
+        {
+            if (ImGui::Selectable(dg.products.items[i].name, selected_ix == i))
+                selected_ix = i;
+        }
+        ImGui::EndChild();
+    }
+
+    ImGui::SameLine();
+
+    { // -------- Properties --------
+        ImGui::BeginChild("Properties", ImVec2(0, ImGui::GetContentRegionAvail().y), ImGuiChildFlags_None, ImGuiWindowFlags_None);
+        ImGui::SeparatorText("Properties");
+
+        if (selected_ix == -1)
+        {
+            ImGui::Text("Select a product");
+        }
+        else
+        {
+            dg_product product = dg.products.items[selected_ix];
+
             ImGui::Text("ID:                  %d", product.id);
             ImGui::Text("Name:                %s", product.name);
             ImGui::Text("ISIN:                %s", product.isin);
@@ -240,10 +324,50 @@ void render_products()
             ImGui::Text("Quality switchable:  %s", product.quality_switchable ? "true" : "false");
             ImGui::Text("Quality switch free: %s", product.quality_switch_free ? "true" : "false");
             ImGui::Text("Vwd module id:       %d", product.vwd_module_id);
-            ImGui::TreePop();
+
+            ImGui::SeparatorText("Chart");
+
+            static int period_radio = 0;
+            ImGui::AlignTextToFramePadding();
+            ImGui::Text("Period:");
+            ImGui::SameLine();
+            ImGui::RadioButton("1D", &period_radio, 0);
+            ImGui::SameLine();
+            ImGui::RadioButton("1W", &period_radio, 1);
+            ImGui::SameLine();
+            ImGui::RadioButton("1M", &period_radio, 2);
+            ImGui::SameLine();
+            ImGui::RadioButton("1Y", &period_radio, 3);
+
+            dg_chart_period period = PERIOD_1D;
+            if (period_radio == 0)
+                period = PERIOD_1D;
+            if (period_radio == 1)
+                period = PERIOD_1W;
+            if (period_radio == 2)
+                period = PERIOD_1M;
+            if (period_radio == 3)
+                period = PERIOD_1Y;
+
+            static dg_product_chart_options chart_opts = {0};
+            static dg_product_chart chart = {0};
+
+            dg_product_chart_options opts = {
+                .product = product,
+                .period = period};
+
+            // Only get new data if options changed
+            if (opts != chart_opts)
+            {
+                dg_get_product_chart(&chart, opts);
+            }
+            chart_opts = opts;
+
+            render_product_chart(chart);
         }
+
+        ImGui::EndChild();
     }
-    // ImGui::End();
 }
 
 void render_transactions()
@@ -295,107 +419,8 @@ void render_transactions()
     // ImGui::End();
 }
 
-void render_price()
-{
-    // ImGui::Begin("Price data");
-
-    static ImGuiComboFlags plot_flags = 0;
-    const char *periods[] = {"1D", "1W", "1M", "6M", "1Y"};
-    static int selected_period_ix = 0;
-
-    // Pass in the preview value visible before opening the combo (it could technically be different contents or not pulled from items[])
-    const char *combo_preview_value = periods[selected_period_ix];
-    if (ImGui::BeginCombo("Period", combo_preview_value, plot_flags))
-    {
-        for (int n = 0; n < IM_ARRAYSIZE(periods); n++)
-        {
-            const bool is_selected = (selected_period_ix == n);
-            if (ImGui::Selectable(periods[n], is_selected))
-                selected_period_ix = n;
-
-            // Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
-            if (is_selected)
-                ImGui::SetItemDefaultFocus();
-        }
-        ImGui::EndCombo();
-    }
-
-    dg_price_plot_options opts = {0};
-    opts.period = periods[selected_period_ix];
-    opts.product = &dg.products.items[0];
-
-    static dg_price_history history = {0};
-
-    if (ImGui::Button("Get"))
-    {
-        if (!dg_get_price(&history, opts))
-        {
-            fprintf(stderr, "Failed to get price data\n");
-        }
-    }
-
-    char plot_title[64];
-    if (history.currency)
-    {
-        snprintf(plot_title, sizeof(plot_title), "Price [%s]", history.currency);
-    }
-    else
-    {
-        snprintf(plot_title, sizeof(plot_title), "Price");
-    }
-
-    if (ImPlot::BeginPlot(plot_title))
-    {
-        if (history.chart.n_points > 0)
-        {
-            float min_val = *(history.chart.prices);
-            float max_val = *(history.chart.prices);
-            for (size_t i = 0; i < history.chart.n_points; ++i)
-            {
-                if (history.chart.prices[i] < min_val)
-                    min_val = history.chart.prices[i];
-                if (history.chart.prices[i] > max_val)
-                    max_val = history.chart.prices[i];
-            }
-            float padding = (max_val - min_val) * 0.1;
-
-            ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
-            ImPlot::GetStyle().Use24HourClock = true;
-            ImPlot::SetupAxesLimits(history.chart.timestamps[0], history.chart.timestamps[history.chart.n_points - 1], min_val - padding, max_val + padding, ImPlotCond_Always);
-
-            // Plot lines
-            ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.25f);
-            ImPlot::PlotShaded(history.product->name, history.chart.timestamps, history.chart.prices, history.chart.n_points, -INFINITY);
-            ImPlot::PlotLine(history.product->name, history.chart.timestamps, history.chart.prices, history.chart.n_points);
-
-            // Plot tags
-            ImVec4 color;
-
-            color = ImVec4(0, 1, 0, 1);
-            ImPlot::TagY(history.high_price, color);
-            ImPlot::PushStyleColor(ImPlotCol_Line, color);
-            ImPlot::PlotInfLines("", &history.high_price, 1, ImPlotInfLinesFlags_Horizontal);
-            ImPlot::PopStyleColor();
-
-            color = ImVec4(1, 0, 0, 1);
-            ImPlot::TagY(history.low_price, color);
-            ImPlot::PushStyleColor(ImPlotCol_Line, color);
-            ImPlot::PlotInfLines("", &history.low_price, 1, ImPlotInfLinesFlags_Horizontal);
-            ImPlot::PopStyleColor();
-        }
-        ImPlot::EndPlot();
-    }
-    // ImGui::End();
-}
-
 void render_app()
 {
-    if (show_demo_window)
-        ImGui::ShowDemoWindow(&show_demo_window);
-
-    if (show_implot_demo_window)
-        ImPlot::ShowDemoWindow(&show_implot_demo_window);
-
     render_login_popup();
 
     ImGuiIO io = ImGui::GetIO();
@@ -427,15 +452,16 @@ void render_app()
                 render_products();
                 ImGui::EndTabItem();
             }
-            if (ImGui::BeginTabItem("Price"))
-            {
-                render_price();
-                ImGui::EndTabItem();
-            }
             ImGui::EndTabBar();
         }
     }
     ImGui::End();
+
+    if (show_demo_window)
+        ImGui::ShowDemoWindow(&show_demo_window);
+
+    if (show_implot_demo_window)
+        ImPlot::ShowDemoWindow(&show_implot_demo_window);
 }
 
 static void glfw_error_callback(int error, const char *description)

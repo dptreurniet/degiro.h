@@ -69,7 +69,7 @@ bool dg__login(degiro *dg, const char *username, const char *password, const cha
     // -------- Part 2: time-based one-time password --------
     dg__set_curl_url(&dgb.curl, format_string("%s%s/totp", DEGIRO_BASE_URL, DEGIRO_LOGIN_URL));
 
-    const char* payload = format_string("{\"username\":\"%s\",\"password\":\"%s\",\"oneTimePassword\":\"%s\"}", username, password, totp);
+    const char *payload = format_string("{\"username\":\"%s\",\"password\":\"%s\",\"oneTimePassword\":\"%s\"}", username, password, totp);
     curl_easy_setopt(dgb.curl.curl, CURLOPT_POSTFIELDS, payload);
 
     res = dg__make_request(&dgb.curl);
@@ -360,34 +360,41 @@ bool dg__get_products_info(degiro *dg, int *ids, size_t n_ids, dg_products *prod
     return true;
 }
 
-
-bool dg__get_price(dg_price_history *result, dg_price_plot_options opts)
+bool dg__get_product_chart(dg_product_chart *result, dg_product_chart_options opts)
 {
     // https://charting.vwdservices.com/hchart/v1/deGiro/data.js?requestid=1&resolution=P1D&culture=nl-NL&period=P50Y&series=issueid%3A485013849&series=price%3Aissueid%3A485013849&format=json&callback=vwd.hchart.seriesRequestManager.sync_response&userToken=4626342&tz=Europe%2FAmsterdam
 
     result->product = opts.product;
 
     const char *resolution = "1D";
-    if (strcmp(opts.period, "1Y") == 0) {
-        resolution = "1D";
-    } else if(strcmp(opts.period, "1M") == 0) {
-        resolution = "T2H";
-    } else if(strcmp(opts.period, "1W") == 0) {
-        resolution = "T30M";
-    } else if(strcmp(opts.period, "1D") == 0) {
+    switch (opts.period)
+    {
+    case PERIOD_1D:
         resolution = "T1M";
+        break;
+    case PERIOD_1W:
+        resolution = "T30M";
+        break;
+    case PERIOD_1M:
+        resolution = "T2H";
+        break;
+    case PERIOD_1Y:
+        resolution = "1D";
+        break;
+    default:
+        NOB_UNREACHABLE("Undefined period");
     }
-    
+
     nob_log(NOB_INFO, "Getting price info with the following options:");
-    nob_log(NOB_INFO, " - Product: %s", opts.product->name);
-    nob_log(NOB_INFO, " - Period: %s", opts.period);
+    nob_log(NOB_INFO, " - Product: %s", opts.product.name);
+    nob_log(NOB_INFO, " - Period: %s", chart_period_to_str(opts.period));
     nob_log(NOB_INFO, " - Resolution: %s", resolution);
 
     Nob_String_Builder url = {0};
     nob_sb_appendf(&url, "%s?", DEGIRO_GET_CHART_URL);
-    nob_sb_appendf(&url, "series=%s:%s&", opts.product->vwd_identifier_type, opts.product->vwd_id);
-    nob_sb_appendf(&url, "series=price:%s:%s&", opts.product->vwd_identifier_type, opts.product->vwd_id);
-    nob_sb_appendf(&url, "period=P%s&", opts.period);
+    nob_sb_appendf(&url, "series=%s:%s&", opts.product.vwd_identifier_type, opts.product.vwd_id);
+    nob_sb_appendf(&url, "series=price:%s:%s&", opts.product.vwd_identifier_type, opts.product.vwd_id);
+    nob_sb_appendf(&url, "period=P%s&", chart_period_to_str(opts.period));
     nob_sb_appendf(&url, "resolution=P%s&", resolution);
     nob_sb_appendf(&url, "userToken=%d&", dgb.account_config.client_id);
     nob_sb_appendf(&url, "culture=nl-NL&");
@@ -409,7 +416,7 @@ bool dg__get_price(dg_price_history *result, dg_price_plot_options opts)
         return false;
     }
 
-    return dg__parse_price_response(json, result);
+    return dg__parse_chart_response(json, result);
 }
 
 void dg__cleanup()
