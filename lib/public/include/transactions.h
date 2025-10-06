@@ -37,6 +37,6 @@ typedef struct dg_transaction
 
 typedef struct dg_transactions
 {
-    dg_transaction *transactions;
+    dg_transaction *items;
     size_t count;
 } dg_transactions;

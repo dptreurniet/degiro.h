@@ -1,6 +1,6 @@
 #include "degiro_products.h"
 #include "nob.h"
-#include "utils.h"
+#include "degiro_utils.h"
 
 bool dg__products_from_json_string(dg_products *products, const char *json_string)
 {

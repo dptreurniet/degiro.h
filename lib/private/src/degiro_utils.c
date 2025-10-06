@@ -1,4 +1,4 @@
-#include "utils.h"
+#include "degiro_utils.h"
 #include <stdlib.h>
 #include <string.h>
 #include "defines.h"
@@ -6,6 +6,7 @@
 #include <stdarg.h>
 #include <ctype.h>
 #include "nob.h"
+#include <cjson/cJSON.h>
 
 const char *format_string(const char *format, ...)
 {

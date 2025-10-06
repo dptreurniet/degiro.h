@@ -1,7 +1,7 @@
 #include "degiro.h"
 #include "degiro_main.h"
 #include "defines.h"
-#include "utils.h"
+#include "degiro_utils.h"
 #include <ctype.h>
 
 #ifndef NOB_IMPLEMENTATION
@@ -11,6 +11,7 @@
 
 #include "secrets.h" //temp
 #include "degiro_price.h"
+#include "utils.h"
 
 dg_backend dgb = {0};
 
@@ -387,14 +388,14 @@ bool dg__get_product_chart(dg_product_chart *result, dg_product_chart_options op
 
     nob_log(NOB_INFO, "Getting price info with the following options:");
     nob_log(NOB_INFO, " - Product: %s", opts.product.name);
-    nob_log(NOB_INFO, " - Period: %s", chart_period_to_str(opts.period));
+    nob_log(NOB_INFO, " - Period: %s", dg_chart_period_to_str(opts.period));
     nob_log(NOB_INFO, " - Resolution: %s", resolution);
 
     Nob_String_Builder url = {0};
     nob_sb_appendf(&url, "%s?", DEGIRO_GET_CHART_URL);
     nob_sb_appendf(&url, "series=%s:%s&", opts.product.vwd_identifier_type, opts.product.vwd_id);
     nob_sb_appendf(&url, "series=price:%s:%s&", opts.product.vwd_identifier_type, opts.product.vwd_id);
-    nob_sb_appendf(&url, "period=P%s&", chart_period_to_str(opts.period));
+    nob_sb_appendf(&url, "period=P%s&", dg_chart_period_to_str(opts.period));
     nob_sb_appendf(&url, "resolution=P%s&", resolution);
     nob_sb_appendf(&url, "userToken=%d&", dgb.account_config.client_id);
     nob_sb_appendf(&url, "culture=nl-NL&");

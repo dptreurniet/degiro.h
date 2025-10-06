@@ -1,16 +1,18 @@
+#include <stdio.h>
+
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl2.h"
-#include <stdio.h>
 #ifdef __APPLE__
 #define GL_SILENCE_DEPRECATION
 #endif
 #include <GLFW/glfw3.h>
-#include "implot.h"
 #include <math.h>
+
 #include <iostream>
-extern "C"
-{
+
+#include "implot.h"
+extern "C" {
 #include "degiro.h"
 }
 #include "secrets.h"
@@ -22,10 +24,8 @@ ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
 degiro dg = {0};
 
-void render_login_popup()
-{
-    if (!dg.logged_in && glfwGetTime() > 0.5)
-    {
+void render_login_popup() {
+    if (!dg.logged_in && glfwGetTime() > 0.5) {
         ImGui::OpenPopup("Login");
     }
 
@@ -33,8 +33,7 @@ void render_login_popup()
     ImVec2 center = ImGui::GetMainViewport()->GetCenter();
     ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
 
-    if (ImGui::BeginPopupModal("Login", NULL, ImGuiWindowFlags_AlwaysAutoResize))
-    {
+    if (ImGui::BeginPopupModal("Login", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
 #ifdef USERNAME
         static char username[64] = USERNAME;
 #else
@@ -49,42 +48,34 @@ void render_login_popup()
 #endif
         ImGui::InputTextWithHint("password", "******", password, IM_ARRAYSIZE(password), ImGuiInputTextFlags_Password);
 
-        if (glfwGetTime() < 0.6)
-        {
+        if (glfwGetTime() < 0.6) {
             ImGui::SetKeyboardFocusHere();
         }
         static char totp[7] = "";
         ImGui::InputTextWithHint("one-time password", "123456", totp, IM_ARRAYSIZE(totp));
 
-        if (ImGui::Button("Login") || ImGui::IsKeyPressed(ImGuiKey_Enter))
-        {
-            if (!dg_login(&dg, username, password, totp))
-            {
+        if (ImGui::Button("Login") || ImGui::IsKeyPressed(ImGuiKey_Enter)) {
+            if (!dg_login(&dg, username, password, totp)) {
                 fprintf(stderr, "Failed to login\n");
-            }
-            else
-            {
+            } else {
                 memset(&username, '\0', sizeof(username));
                 memset(&password, '\0', sizeof(password));
                 memset(&totp, '\0', sizeof(totp));
 
-                if (!dg_get_portfolio(&dg)) 
-                {
+                if (!dg_get_portfolio(&dg)) {
                     fprintf(stderr, "Failed to get portfolio\n");
                 }
             }
         }
 
-        if (dg.logged_in)
-        {
+        if (dg.logged_in) {
             ImGui::CloseCurrentPopup();
         }
         ImGui::EndPopup();
     }
 }
 
-void render_account_info()
-{
+void render_account_info() {
     // ImGui::Begin("Account info");
 
     ImGui::Text("Username:          %s", dg.account_data.username);
@@ -103,8 +94,7 @@ void render_account_info()
     ImGui::Text("Culture:           %s", dg.account_data.culture);
     ImGui::Text("Eff. client role:  %s", dg.account_data.effective_client_role);
 
-    if (ImGui::TreeNode("First contact"))
-    {
+    if (ImGui::TreeNode("First contact")) {
         ImGui::Text("Display name:   %s", dg.account_data.first_contact.display_name);
         ImGui::Text("First name:     %s", dg.account_data.first_contact.first_name);
         ImGui::Text("Last name:      %s", dg.account_data.first_contact.last_name);
@@ -115,8 +105,7 @@ void render_account_info()
         ImGui::TreePop();
     }
 
-    if (ImGui::TreeNode("Address"))
-    {
+    if (ImGui::TreeNode("Address")) {
         ImGui::Text("Street:        %s", dg.account_data.address.street_address);
         ImGui::Text("Street number: %s", dg.account_data.address.street_address_number);
         ImGui::Text("Zip:           %s", dg.account_data.address.zip);
@@ -125,8 +114,7 @@ void render_account_info()
         ImGui::TreePop();
     }
 
-    if (ImGui::TreeNode("Bank account"))
-    {
+    if (ImGui::TreeNode("Bank account")) {
         ImGui::Text("BIC:    %s", dg.account_data.bank_account.bic);
         ImGui::Text("IBAN:   %s", dg.account_data.bank_account.iban);
         ImGui::Text("Status: %s", dg.account_data.bank_account.status);
@@ -135,8 +123,7 @@ void render_account_info()
         ImGui::TreePop();
     }
 
-    if (ImGui::TreeNode("Flags"))
-    {
+    if (ImGui::TreeNode("Flags")) {
         ImGui::Text("Can upgrade:             %s", dg.account_data.can_upgrade ? "true" : "false");
         ImGui::Text("Is allocation available: %s", dg.account_data.is_allocation_available ? "true" : "false");
         ImGui::Text("Is am client active:     %s", dg.account_data.is_am_client_active ? "true" : "false");
@@ -149,8 +136,7 @@ void render_account_info()
     // ImGui::End();
 }
 
-void render_portfolio()
-{
+void render_portfolio() {
     // ImGui::Begin("Portfolio");
 
     static bool show_non_zero_only = true;
@@ -160,19 +146,14 @@ void render_portfolio()
     static bool show_cash = true;
     ImGui::Checkbox("Cash", &show_cash);
 
-    if (dg.portfolio.count == 0)
-    {
+    if (dg.portfolio.count == 0) {
         ImGui::Text("Portfolio has not been loaded yet...");
-    }
-    else
-    {
-        for (auto i = 0; i < dg.portfolio.count; i++)
-        {
+    } else {
+        for (auto i = 0; i < dg.portfolio.count; i++) {
             dg_position position = dg.portfolio.items[i];
 
             const dg_product *product = NULL;
-            if (strcmp(position.position_type, "PRODUCT") == 0)
-            {
+            if (strcmp(position.position_type, "PRODUCT") == 0) {
                 // product = dg_get_product_by_id(&dg, atoi(position.id));
             }
 
@@ -181,8 +162,7 @@ void render_portfolio()
             if (!show_cash && strcmp(position.position_type, "CASH") == 0)
                 continue;
 
-            if (ImGui::TreeNode(product ? product->name : position.id))
-            {
+            if (ImGui::TreeNode(product ? product->name : position.id)) {
                 ImGui::Text("ID:                         %s", position.id);
                 ImGui::Text("Position type:              %s", position.position_type);
                 ImGui::Text("Size:                       %d", position.size);
@@ -204,22 +184,16 @@ void render_portfolio()
     // ImGui::End();
 }
 
-void render_product_chart(dg_product_chart chart)
-{
+void render_product_chart(dg_product_chart chart) {
     char plot_title[64];
-    if (chart.currency)
-    {
+    if (chart.currency) {
         snprintf(plot_title, sizeof(plot_title), "Price [%s]", chart.currency);
-    }
-    else
-    {
+    } else {
         snprintf(plot_title, sizeof(plot_title), "Price");
     }
 
-    if (ImPlot::BeginPlot(plot_title, ImGui::GetContentRegionAvail(), ImPlotFlags_NoLegend))
-    {
-        if (chart.chart.n_points > 0)
-        {
+    if (ImPlot::BeginPlot(plot_title, ImGui::GetContentRegionAvail(), ImPlotFlags_NoLegend)) {
+        if (chart.chart.n_points > 0) {
             ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
             ImPlot::GetStyle().Use24HourClock = true;
 
@@ -250,34 +224,29 @@ void render_product_chart(dg_product_chart chart)
     }
 }
 
-bool operator==(const dg_product_chart_options &lhs, const dg_product_chart_options &rhs)
-{
+bool operator==(const dg_product_chart_options &lhs, const dg_product_chart_options &rhs) {
     if (lhs.product.id != rhs.product.id)
         return false;
     if (lhs.period != rhs.period)
         return false;
     return true;
 }
-bool operator!=(const dg_product_chart_options &lhs, const dg_product_chart_options &rhs)
-{
+bool operator!=(const dg_product_chart_options &lhs, const dg_product_chart_options &rhs) {
     if (lhs == rhs)
         return false;
     return true;
 }
 
-void render_products()
-{
+void render_products() {
     static int selected_ix = -1;
 
-    { // -------- Products --------
+    {  // -------- Products --------
         ImGui::BeginChild("Products", ImVec2(ImGui::GetContentRegionAvail().x * 0.5f, ImGui::GetContentRegionAvail().y), ImGuiChildFlags_None, ImGuiWindowFlags_None);
-        if (dg.products.count == 0)
-        {
+        if (dg.products.count == 0) {
             ImGui::Text("No products loaded yet...");
         }
 
-        for (auto i = 0; i < dg.products.count; i++)
-        {
+        for (auto i = 0; i < dg.products.count; i++) {
             if (ImGui::Selectable(dg.products.items[i].name, selected_ix == i))
                 selected_ix = i;
         }
@@ -286,16 +255,13 @@ void render_products()
 
     ImGui::SameLine();
 
-    { // -------- Properties --------
+    {  // -------- Properties --------
         ImGui::BeginChild("Properties", ImVec2(0, ImGui::GetContentRegionAvail().y), ImGuiChildFlags_None, ImGuiWindowFlags_None);
         ImGui::SeparatorText("Properties");
 
-        if (selected_ix == -1)
-        {
+        if (selected_ix == -1) {
             ImGui::Text("Select a product");
-        }
-        else
-        {
+        } else {
             dg_product product = dg.products.items[selected_ix];
 
             ImGui::Text("ID:                  %d", product.id);
@@ -357,8 +323,7 @@ void render_products()
                 .period = period};
 
             // Only get new data if options changed
-            if (opts != chart_opts)
-            {
+            if (opts != chart_opts) {
                 dg_get_product_chart(&chart, opts);
             }
             chart_opts = opts;
@@ -370,85 +335,155 @@ void render_products()
     }
 }
 
-void render_transactions()
-{
-    // ImGui::Begin("Transactions");
-
-    dg_get_transactions_options options = {
-        .from_date = "2025-01-01",
-        .to_date = "2025-12-01",
-        .group_transactions_by_order = true};
-
+void render_transactions() {
     static dg_transactions transactions = {0};
 
-    if (ImGui::Button("Get transactions"))
-    {
-        dg_get_transactions(&dg, options, &transactions);
-    }
+    {  // -------- Transactions list --------
+        if (ImGui::Button("Get all")) {
+            dg_get_transactions_options opts = {
+                .from_date = "1900-01-01",
+                .to_date = "2100-01-01",
+                .group_transactions_by_order = true};
 
-    for (size_t i = 0; i < transactions.count; ++i)
-    {
-        dg_transaction t = transactions.transactions[i];
-        if (ImGui::TreeNode("%s", t.date))
-        {
-            ImGui::Text("id:                                   %d", t.id);
-            ImGui::Text("product_id:                           %d", t.product_id);
-            ImGui::Text("date:                                 %s", t.date);
-            ImGui::Text("buysell:                              %s", t.buysell);
-            ImGui::Text("price:                                %.2f", t.price);
-            ImGui::Text("quantity:                             %d", t.quantity);
-            ImGui::Text("total:                                %.2f", t.total);
-            ImGui::Text("order_type_id:                        %d", t.order_type_id);
-            ImGui::Text("counter_party:                        %s", t.counter_party);
-            ImGui::Text("transfered:                           %s", t.transfered ? "true" : "false");
-            ImGui::Text("fx_rate:                              %d", t.fx_rate);
-            ImGui::Text("nett_fx_rate:                         %d", t.nett_fx_rate);
-            ImGui::Text("gross_fx_rate:                        %d", t.gross_fx_rate);
-            ImGui::Text("auto_fx_fee_in_base_currency:         %d", t.auto_fx_fee_in_base_currency);
-            ImGui::Text("total_in_base_currency:               %.2f", t.total_in_base_currency);
-            ImGui::Text("fee_in_base_currency:                 %.2f", t.fee_in_base_currency);
-            ImGui::Text("total_fees_in_base_currency:          %.2f", t.total_fees_in_base_currency);
-            ImGui::Text("total_plus_fee_in_base_currency:      %.2f", t.total_plus_fee_in_base_currency);
-            ImGui::Text("total_plus_all_fees_in_base_currency: %.2f", t.total_plus_all_fees_in_base_currency);
-            ImGui::Text("transaction_type_id:                  %d", t.transaction_type_id);
-            ImGui::Text("trading_venue:                        %s", t.trading_venue);
-            ImGui::Text("executing_entity_id:                  %s", t.executing_entity_id);
-            ImGui::TreePop();
+            if (!dg_get_transactions(&dg, opts, &transactions)) {
+                fprintf(stderr, "Failed to get transactions\n");
+            }
+        }
+
+        if (transactions.items == 0) {
+            ImGui::Text("No transactions loaded yet");
+        } else {
+            ImGuiTableFlags table_flags = 0;
+            table_flags |= ImGuiTableFlags_SizingFixedFit;
+            table_flags |= ImGuiTableFlags_NoHostExtendX;
+            table_flags |= ImGuiTableFlags_RowBg;
+            table_flags |= ImGuiTableFlags_BordersOuter;
+            table_flags |= ImGuiTableFlags_BordersV;
+            table_flags |= ImGuiTableFlags_NoBordersInBody;
+            table_flags |= ImGuiTableFlags_ScrollY;
+
+            if (ImGui::BeginTable("transactions", 7, table_flags)) {
+                ImGui::TableSetupColumn("Date");
+                ImGui::TableSetupColumn("Action");
+                ImGui::TableSetupColumn("#");
+                ImGui::TableSetupColumn("Product");
+                ImGui::TableSetupColumn("Rate");
+                ImGui::TableSetupColumn("Total w/ fees");
+                ImGui::TableSetupScrollFreeze(0, 1);  // Keep header always visible
+                ImGui::TableHeadersRow();
+
+                for (size_t i = 0; i < transactions.count; ++i) {
+                    dg_transaction t = transactions.items[i];
+                    dg_product product = {0};
+
+                    if (!dg_get_product_by_id(&dg, t.product_id, &product)) {
+                        fprintf(stderr, "Failed to find product with id %d in library\n", t.id);
+                        continue;
+                    }
+
+                    ImGui::TableNextRow();
+                    ImGui::TableSetColumnIndex(0);
+                    char *trimmed_date = (char *)malloc(sizeof(char) * 11);
+                    strncpy(trimmed_date, t.date, 10);
+                    trimmed_date[10] = '\0';
+                    ImGui::Text("%s  ", trimmed_date);
+                    free(trimmed_date);
+
+                    ImGui::TableNextColumn();
+                    const char *buysell = strcmp(t.buysell, "S") == 0 ? " Sold " : "Bought";
+                    if (strcmp(t.buysell, "S") == 0) {
+                        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(.7, 0, 0, 1));
+                        ImGui::Button("Sell", ImVec2(50, 0));
+                    } else {
+                        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, .7, 0, 1));
+                        ImGui::Button("Buy", ImVec2(50, 0));
+                    }
+                    ImGui::PopStyleColor();
+
+                    ImGui::TableNextColumn();
+                    ImGui::Text("%d", abs(t.quantity));
+
+                    ImGui::TableNextColumn();
+                    ImGui::Text("%s  ", product.name);
+
+                    ImGui::TableNextColumn();
+                    ImGui::Text("%.2f  ", t.price);
+
+                    ImGui::TableNextColumn();
+                    ImGui::Text("%.2f  ", t.total_plus_all_fees_in_base_currency);
+                }
+                ImGui::EndTable();
+            }
         }
     }
-    // ImGui::End();
+
+    // dg_get_transactions_options options = {
+    //     .from_date = "1900-01-01",
+    //     .to_date = "2100-01-01",
+    //     .group_transactions_by_order = true};
+
+    // static dg_transactions transactions = {0};
+
+    // if (ImGui::Button("Get transactions"))
+    // {
+    //     dg_get_transactions(&dg, options, &transactions);
+    // }
+
+    // for (size_t i = 0; i < transactions.count; ++i)
+    // {
+    //     dg_transaction t = transactions.items[i];
+    //     if (ImGui::TreeNode("##%s", t.date))
+    //     {
+    //         ImGui::Text("id:                                   %d", t.id);
+    //         ImGui::Text("product_id:                           %d", t.product_id);
+    //         ImGui::Text("date:                                 %s", t.date);
+    //         ImGui::Text("buysell:                              %s", t.buysell);
+    //         ImGui::Text("price:                                %.2f", t.price);
+    //         ImGui::Text("quantity:                             %d", t.quantity);
+    //         ImGui::Text("total:                                %.2f", t.total);
+    //         ImGui::Text("order_type_id:                        %d", t.order_type_id);
+    //         ImGui::Text("counter_party:                        %s", t.counter_party);
+    //         ImGui::Text("transfered:                           %s", t.transfered ? "true" : "false");
+    //         ImGui::Text("fx_rate:                              %d", t.fx_rate);
+    //         ImGui::Text("nett_fx_rate:                         %d", t.nett_fx_rate);
+    //         ImGui::Text("gross_fx_rate:                        %d", t.gross_fx_rate);
+    //         ImGui::Text("auto_fx_fee_in_base_currency:         %d", t.auto_fx_fee_in_base_currency);
+    //         ImGui::Text("total_in_base_currency:               %.2f", t.total_in_base_currency);
+    //         ImGui::Text("fee_in_base_currency:                 %.2f", t.fee_in_base_currency);
+    //         ImGui::Text("total_fees_in_base_currency:          %.2f", t.total_fees_in_base_currency);
+    //         ImGui::Text("total_plus_fee_in_base_currency:      %.2f", t.total_plus_fee_in_base_currency);
+    //         ImGui::Text("total_plus_all_fees_in_base_currency: %.2f", t.total_plus_all_fees_in_base_currency);
+    //         ImGui::Text("transaction_type_id:                  %d", t.transaction_type_id);
+    //         ImGui::Text("trading_venue:                        %s", t.trading_venue);
+    //         ImGui::Text("executing_entity_id:                  %s", t.executing_entity_id);
+    //         ImGui::TreePop();
+    //     }
+    // }
 }
 
-void render_app()
-{
+void render_app() {
     render_login_popup();
 
     ImGuiIO io = ImGui::GetIO();
     ImGui::SetNextWindowSize(ImVec2(io.DisplaySize.x, io.DisplaySize.y), ImGuiCond_Always);
     ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
 
-    if (ImGui::Begin("Docked Window", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove))
-    {
+    if (ImGui::Begin("Docked Window", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove)) {
         ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_None;
-        if (ImGui::BeginTabBar("MyTabBar", tab_bar_flags))
-        {
-            if (ImGui::BeginTabItem("Account info"))
-            {
+        if (ImGui::BeginTabBar("MyTabBar", tab_bar_flags)) {
+            if (ImGui::BeginTabItem("Account info")) {
                 render_account_info();
                 ImGui::EndTabItem();
             }
-            if (ImGui::BeginTabItem("Portfolio"))
-            {
+            if (ImGui::BeginTabItem("Portfolio")) {
                 render_portfolio();
                 ImGui::EndTabItem();
             }
-            if (ImGui::BeginTabItem("Transactions"))
-            {
+            if (ImGui::BeginTabItem("Transactions")) {
                 render_transactions();
                 ImGui::EndTabItem();
             }
-            if (ImGui::BeginTabItem("Products"))
-            {
+            if (ImGui::BeginTabItem("Products")) {
                 render_products();
                 ImGui::EndTabItem();
             }
@@ -464,15 +499,12 @@ void render_app()
         ImPlot::ShowDemoWindow(&show_implot_demo_window);
 }
 
-static void glfw_error_callback(int error, const char *description)
-{
+static void glfw_error_callback(int error, const char *description) {
     fprintf(stderr, "GLFW Error %d: %s\n", error, description);
 }
 
-int main(int, char **)
-{
-    if (!dg_init())
-    {
+int main(int, char **) {
+    if (!dg_init()) {
         fprintf(stderr, "Failed to initialize DeGiro\n");
         return 1;
     }
@@ -486,14 +518,14 @@ int main(int, char **)
     if (window == nullptr)
         return 1;
     glfwMakeContextCurrent(window);
-    glfwSwapInterval(1); // Enable vsync
+    glfwSwapInterval(1);  // Enable vsync
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO &io = ImGui::GetIO();
     (void)io;
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     ImPlot::CreateContext();
 
@@ -522,16 +554,14 @@ int main(int, char **)
     // IM_ASSERT(font != nullptr);
 
     // Main loop
-    while (!glfwWindowShouldClose(window))
-    {
+    while (!glfwWindowShouldClose(window)) {
         // Poll and handle events (inputs, window resize, etc.)
         // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
         // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
         // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
         // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
         glfwPollEvents();
-        if (glfwGetWindowAttrib(window, GLFW_ICONIFIED) != 0)
-        {
+        if (glfwGetWindowAttrib(window, GLFW_ICONIFIED) != 0) {
             ImGui_ImplGlfw_Sleep(10);
             continue;
         }

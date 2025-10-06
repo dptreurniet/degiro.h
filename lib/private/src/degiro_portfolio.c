@@ -2,7 +2,7 @@
 
 #include <cjson/cJSON.h>
 #include "nob.h"
-#include "utils.h"
+#include "degiro_utils.h"
 
 bool dg__portfolio_from_json_string(dg_portfolio *portfolio, const char *json_string)
 {

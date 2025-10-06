@@ -1,6 +1,6 @@
 #include "degiro_account.h"
 #include <cjson/cJSON.h>
-#include "utils.h"
+#include "degiro_utils.h"
 #include "nob.h"
 
 bool dg__account_config_from_json_string(dg_account_config *config, const char *json_string)

@@ -10,8 +10,6 @@ typedef enum {
     PERIOD_1Y,
 } dg_chart_period;
 
-const char* chart_period_to_str(dg_chart_period p);
-
 typedef struct dg_product_chart_options {
     dg_product product;
     dg_chart_period period;

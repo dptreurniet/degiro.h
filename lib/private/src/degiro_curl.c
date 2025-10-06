@@ -1,6 +1,6 @@
 #include "degiro_curl.h"
 #include <cjson/cJSON.h>
-#include "utils.h"
+#include "degiro_utils.h"
 #include <stdlib.h>
 #include <string.h>
 #include "nob.h"

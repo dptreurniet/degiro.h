@@ -2,7 +2,7 @@
 
 #include "nob.h"
 #include <stdio.h>
-#include "utils.h"
+#include "degiro_utils.h"
 
 bool dg__parse_chart_response_time_data(cJSON *item, dg_product_chart *result)
 {

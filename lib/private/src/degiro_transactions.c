@@ -1,5 +1,5 @@
 #include "degiro_transactions.h"
-#include "utils.h"
+#include "degiro_utils.h"
 #include "nob.h"
 
 bool dg__transaction_from_json_obj(dg_transaction *transaction, cJSON *obj)

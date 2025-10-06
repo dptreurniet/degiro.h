@@ -6,7 +6,7 @@ find_package(cJSON CONFIG REQUIRED)
 
 set(SOURCES
     public/src/degiro.c
-    public/src/chart.c
+    public/src/utils.c
 
     private/src/degiro_main.c
     private/src/degiro_curl.c
@@ -15,14 +15,12 @@ set(SOURCES
     private/src/degiro_products.c
     private/src/degiro_transactions.c
     private/src/degiro_price.c
-    private/src/utils.c
+    private/src/degiro_utils.c
 )
 
 set(HEADERS
     public/include/degiro.h
-
-    private/include/degiro_main.h
-    private/include/utils.h
+    public/include/utils.h
 )
 
 
