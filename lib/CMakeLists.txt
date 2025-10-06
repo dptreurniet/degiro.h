@@ -10,7 +10,7 @@ set(SOURCES
 
     private/src/degiro_main.c
     private/src/degiro_curl.c
-    private/src/degiro_account.c
+    private/src/degiro_user.c
     private/src/degiro_portfolio.c
     private/src/degiro_products.c
     private/src/degiro_transactions.c

@@ -75,70 +75,64 @@ void render_login_popup() {
     }
 }
 
-void render_account_info() {
-    // ImGui::Begin("Account info");
+void render_user_info() {
+    ImGui::Text("Username:          %s", dg.user_data.username);
+    ImGui::Text("Display name:      %s", dg.user_data.display_name);
+    ImGui::Text("Email:             %s", dg.user_data.email);
+    ImGui::Text("Language:          %s", dg.user_data.language);
+    ImGui::Text("Locale:            %s", dg.user_data.locale);
+    ImGui::Text("Member code:       %s", dg.user_data.member_code);
 
-    ImGui::Text("Username:          %s", dg.account_data.username);
-    ImGui::Text("Display name:      %s", dg.account_data.display_name);
-    ImGui::Text("Email:             %s", dg.account_data.email);
-    ImGui::Text("Language:          %s", dg.account_data.language);
-    ImGui::Text("Locale:            %s", dg.account_data.locale);
-    ImGui::Text("Member code:       %s", dg.account_data.member_code);
+    ImGui::Text("ID:                %d", dg.user_data.id);
+    ImGui::Text("Int account:       %d", dg.user_data.int_account);
 
-    ImGui::Text("ID:                %d", dg.account_data.id);
-    ImGui::Text("Int account:       %d", dg.account_data.int_account);
-
-    ImGui::Text("Cellphone number:  %s", dg.account_data.cellphone_number);
-    ImGui::Text("Client role:       %s", dg.account_data.client_role);
-    ImGui::Text("Contract type:     %s", dg.account_data.contract_type);
-    ImGui::Text("Culture:           %s", dg.account_data.culture);
-    ImGui::Text("Eff. client role:  %s", dg.account_data.effective_client_role);
+    ImGui::Text("Cellphone number:  %s", dg.user_data.cellphone_number);
+    ImGui::Text("Client role:       %s", dg.user_data.client_role);
+    ImGui::Text("Contract type:     %s", dg.user_data.contract_type);
+    ImGui::Text("Culture:           %s", dg.user_data.culture);
+    ImGui::Text("Eff. client role:  %s", dg.user_data.effective_client_role);
 
     if (ImGui::TreeNode("First contact")) {
-        ImGui::Text("Display name:   %s", dg.account_data.first_contact.display_name);
-        ImGui::Text("First name:     %s", dg.account_data.first_contact.first_name);
-        ImGui::Text("Last name:      %s", dg.account_data.first_contact.last_name);
-        ImGui::Text("Date of birth:  %s", dg.account_data.first_contact.date_of_birth);
-        ImGui::Text("Place of birth: %s (%s)", dg.account_data.first_contact.place_of_birth, dg.account_data.first_contact.country_of_birth);
-        ImGui::Text("Nationality:    %s", dg.account_data.first_contact.nationality);
-        ImGui::Text("Gender:         %s", dg.account_data.first_contact.gender);
+        ImGui::Text("Display name:   %s", dg.user_data.first_contact.display_name);
+        ImGui::Text("First name:     %s", dg.user_data.first_contact.first_name);
+        ImGui::Text("Last name:      %s", dg.user_data.first_contact.last_name);
+        ImGui::Text("Date of birth:  %s", dg.user_data.first_contact.date_of_birth);
+        ImGui::Text("Place of birth: %s (%s)", dg.user_data.first_contact.place_of_birth, dg.user_data.first_contact.country_of_birth);
+        ImGui::Text("Nationality:    %s", dg.user_data.first_contact.nationality);
+        ImGui::Text("Gender:         %s", dg.user_data.first_contact.gender);
         ImGui::TreePop();
     }
 
     if (ImGui::TreeNode("Address")) {
-        ImGui::Text("Street:        %s", dg.account_data.address.street_address);
-        ImGui::Text("Street number: %s", dg.account_data.address.street_address_number);
-        ImGui::Text("Zip:           %s", dg.account_data.address.zip);
-        ImGui::Text("City:          %s", dg.account_data.address.city);
-        ImGui::Text("Country:       %s", dg.account_data.address.country);
+        ImGui::Text("Street:        %s", dg.user_data.address.street_address);
+        ImGui::Text("Street number: %s", dg.user_data.address.street_address_number);
+        ImGui::Text("Zip:           %s", dg.user_data.address.zip);
+        ImGui::Text("City:          %s", dg.user_data.address.city);
+        ImGui::Text("Country:       %s", dg.user_data.address.country);
         ImGui::TreePop();
     }
 
     if (ImGui::TreeNode("Bank account")) {
-        ImGui::Text("BIC:    %s", dg.account_data.bank_account.bic);
-        ImGui::Text("IBAN:   %s", dg.account_data.bank_account.iban);
-        ImGui::Text("Status: %s", dg.account_data.bank_account.status);
-        ImGui::Text("ID:     %d", dg.account_data.bank_account.bank_account_id);
+        ImGui::Text("BIC:    %s", dg.user_data.bank_account.bic);
+        ImGui::Text("IBAN:   %s", dg.user_data.bank_account.iban);
+        ImGui::Text("Status: %s", dg.user_data.bank_account.status);
+        ImGui::Text("ID:     %d", dg.user_data.bank_account.bank_account_id);
 
         ImGui::TreePop();
     }
 
     if (ImGui::TreeNode("Flags")) {
-        ImGui::Text("Can upgrade:             %s", dg.account_data.can_upgrade ? "true" : "false");
-        ImGui::Text("Is allocation available: %s", dg.account_data.is_allocation_available ? "true" : "false");
-        ImGui::Text("Is am client active:     %s", dg.account_data.is_am_client_active ? "true" : "false");
-        ImGui::Text("Is collective portfolio: %s", dg.account_data.is_collective_portfolio ? "true" : "false");
-        ImGui::Text("Is isk client:           %s", dg.account_data.is_isk_client ? "true" : "false");
-        ImGui::Text("Is withdrawal available: %s", dg.account_data.is_withdrawal_available ? "true" : "false");
+        ImGui::Text("Can upgrade:             %s", dg.user_data.can_upgrade ? "true" : "false");
+        ImGui::Text("Is allocation available: %s", dg.user_data.is_allocation_available ? "true" : "false");
+        ImGui::Text("Is am client active:     %s", dg.user_data.is_am_client_active ? "true" : "false");
+        ImGui::Text("Is collective portfolio: %s", dg.user_data.is_collective_portfolio ? "true" : "false");
+        ImGui::Text("Is isk client:           %s", dg.user_data.is_isk_client ? "true" : "false");
+        ImGui::Text("Is withdrawal available: %s", dg.user_data.is_withdrawal_available ? "true" : "false");
         ImGui::TreePop();
     }
-
-    // ImGui::End();
 }
 
 void render_portfolio() {
-    // ImGui::Begin("Portfolio");
-
     static bool show_non_zero_only = true;
     ImGui::Checkbox("Non-zero only", &show_non_zero_only);
     ImGui::SameLine();
@@ -417,6 +411,19 @@ void render_transactions() {
         }
     }
 
+    {  // -------- Cash order list --------
+        if (ImGui::Button("Get all")) {
+            // dg_get_transactions_options opts = {
+            //     .from_date = "1900-01-01",
+            //     .to_date = "2100-01-01",
+            //     .group_transactions_by_order = true};
+
+            // if (!dg_get_transactions(&dg, opts, &transactions)) {
+            //     fprintf(stderr, "Failed to get transactions\n");
+            // }
+        }
+    }
+
     // dg_get_transactions_options options = {
     //     .from_date = "1900-01-01",
     //     .to_date = "2100-01-01",
@@ -471,8 +478,8 @@ void render_app() {
     if (ImGui::Begin("Docked Window", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove)) {
         ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_None;
         if (ImGui::BeginTabBar("MyTabBar", tab_bar_flags)) {
-            if (ImGui::BeginTabItem("Account info")) {
-                render_account_info();
+            if (ImGui::BeginTabItem("User info")) {
+                render_user_info();
                 ImGui::EndTabItem();
             }
             if (ImGui::BeginTabItem("Portfolio")) {

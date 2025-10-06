@@ -1,22 +1,20 @@
-#include "degiro_account.h"
 #include <cjson/cJSON.h>
+
+#include "degiro_user.h"
 #include "degiro_utils.h"
 #include "nob.h"
 
-bool dg__account_config_from_json_string(dg_account_config *config, const char *json_string)
-{
-    nob_log(NOB_INFO, "Parsing account_config from JSON string...");
+bool dg__user_config_from_json_string(dg_user_config *config, const char *json_string) {
+    nob_log(NOB_INFO, "Parsing user_config from JSON string...");
 
     cJSON *json = cJSON_Parse(json_string);
-    if (json == NULL)
-    {
+    if (json == NULL) {
         nob_log(NOB_ERROR, "Error parsing JSON");
         return false;
     }
 
     cJSON *data = cJSON_GetObjectItem(json, "data");
-    if (!cJSON_IsObject(data))
-    {
+    if (!cJSON_IsObject(data)) {
         nob_log(NOB_ERROR, "No \"data\" field in JSON");
         return false;
     }
@@ -47,20 +45,17 @@ bool dg__account_config_from_json_string(dg_account_config *config, const char *
     return true;
 }
 
-bool dg__account_data_from_json_string(dg_account_data *info, const char *json_string)
-{
-    nob_log(NOB_INFO, "Parsing account_data from JSON string...");
+bool dg__user_data_from_json_string(dg_user_data *info, const char *json_string) {
+    nob_log(NOB_INFO, "Parsing user_data from JSON string...");
 
     cJSON *json = cJSON_Parse(json_string);
-    if (json == NULL)
-    {
+    if (json == NULL) {
         nob_log(NOB_ERROR, "Error parsing JSON");
         return false;
     }
 
     cJSON *data = cJSON_GetObjectItem(json, "data");
-    if (!cJSON_IsObject(data))
-    {
+    if (!cJSON_IsObject(data)) {
         nob_log(NOB_ERROR, "No \"data\" field in JSON");
         return false;
     }
@@ -87,8 +82,7 @@ bool dg__account_data_from_json_string(dg_account_data *info, const char *json_s
 
     // Address struct
     cJSON *address = cJSON_GetObjectItem(data, "address");
-    if (!cJSON_IsObject(data))
-    {
+    if (!cJSON_IsObject(data)) {
         nob_log(NOB_ERROR, "No \"address\" field in JSON");
         return false;
     }
@@ -101,8 +95,7 @@ bool dg__account_data_from_json_string(dg_account_data *info, const char *json_s
 
     // Address struct
     cJSON *bank_account = cJSON_GetObjectItem(data, "bankAccount");
-    if (!cJSON_IsObject(data))
-    {
+    if (!cJSON_IsObject(data)) {
         nob_log(NOB_ERROR, "No \"bankAccount\" field in JSON");
         return false;
     }
@@ -114,8 +107,7 @@ bool dg__account_data_from_json_string(dg_account_data *info, const char *json_s
 
     // First contact struct
     cJSON *first_contact = cJSON_GetObjectItem(data, "firstContact");
-    if (!cJSON_IsObject(data))
-    {
+    if (!cJSON_IsObject(data)) {
         nob_log(NOB_ERROR, "No \"firstContact\" field in JSON");
         return false;
     }
@@ -129,7 +121,6 @@ bool dg__account_data_from_json_string(dg_account_data *info, const char *json_s
     parse_string(first_contact, "nationality", &(info->first_contact.nationality));
     parse_string(first_contact, "placeOfBirth", &(info->first_contact.place_of_birth));
 
-    
     cJSON_Delete(json);
     return true;
 }

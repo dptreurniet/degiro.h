@@ -1,43 +1,41 @@
-#include "degiro.h"
 #include "degiro_main.h"
-#include "defines.h"
-#include "degiro_utils.h"
+
 #include <ctype.h>
+
+#include "defines.h"
+#include "degiro.h"
+#include "degiro_utils.h"
 
 #ifndef NOB_IMPLEMENTATION
 #define NOB_IMPLEMENTATION
 #endif
-#include "nob.h"
-
-#include "secrets.h" //temp
 #include "degiro_price.h"
+#include "nob.h"
+#include "secrets.h"  //temp
 #include "utils.h"
 
 dg_backend dgb = {0};
 
-bool dg__init()
-{
+bool dg__init() {
     nob_log(NOB_INFO, "Initializing DeGiro...");
     curl_global_init(CURL_GLOBAL_DEFAULT);
 
     dgb.curl.curl = curl_easy_init();
-    if (!dgb.curl.curl)
-    {
+    if (!dgb.curl.curl) {
         nob_log(NOB_ERROR, "Failed to init Curl");
         return false;
     }
 
     curl_easy_setopt(dgb.curl.curl, CURLOPT_WRITEFUNCTION, dg__curl_callback);
     curl_easy_setopt(dgb.curl.curl, CURLOPT_WRITEDATA, &dgb.curl.response);
-    dg__set_default_curl_headers(&dgb.curl, dgb.account_config.session_id);
+    dg__set_default_curl_headers(&dgb.curl, dgb.user_config.session_id);
     // curl_easy_setopt(dgb.curl.curl, CURLOPT_VERBOSE, 1L);
 
     nob_log(NOB_INFO, "DeGiro initialized");
     return true;
 }
 
-bool dg__login(degiro *dg, const char *username, const char *password, const char *totp)
-{
+bool dg__login(degiro *dg, const char *username, const char *password, const char *totp) {
     nob_log(NOB_INFO, "Logging in on DeGiro...");
 
     dg->logged_in = false;
@@ -47,7 +45,7 @@ bool dg__login(degiro *dg, const char *username, const char *password, const cha
     // -------- Part 1: username / password --------
 
     dg__set_curl_POST(&dgb.curl);
-    dg__set_default_curl_headers(&dgb.curl, dgb.account_config.session_id);
+    dg__set_default_curl_headers(&dgb.curl, dgb.user_config.session_id);
     // dg__set_curl_url(&dgb.curl, format_string("%s%s", DEGIRO_BASE_URL, DEGIRO_LOGIN_URL));
 
     // const char *payload = format_string("{\"username\":\"%s\",\"password\":\"%s\"}", username, password);
@@ -74,31 +72,27 @@ bool dg__login(degiro *dg, const char *username, const char *password, const cha
     curl_easy_setopt(dgb.curl.curl, CURLOPT_POSTFIELDS, payload);
 
     res = dg__make_request(&dgb.curl);
-    if (res != CURLE_OK)
-    {
+    if (res != CURLE_OK) {
         nob_log(NOB_ERROR, "curl_easy_perform() failed: %s", curl_easy_strerror(res));
         return false;
     }
 
     dg__login_response_from_json_string(&response, dgb.curl.response.data);
-    if (response.status != 0)
-    {
+    if (response.status != 0) {
         nob_log(NOB_ERROR, "Login failed: %s", response.status_text);
         return false;
     }
 
-    dgb.account_config.session_id = response.session_id; // Store session id to use in subsequent HTTP requests
-    nob_log(NOB_INFO, "Got session id: \"%s\"", dgb.account_config.session_id);
+    dgb.user_config.session_id = response.session_id;  // Store session id to use in subsequent HTTP requests
+    nob_log(NOB_INFO, "Got session id: \"%s\"", dgb.user_config.session_id);
 
-    if (!dg__get_account_config(&dgb))
-    {
-        nob_log(NOB_ERROR, "Failed to get account config");
+    if (!dg__get_user_config(&dgb)) {
+        nob_log(NOB_ERROR, "Failed to get user config");
         return false;
     }
 
-    if (!dg__get_account_data(dg))
-    {
-        nob_log(NOB_ERROR, "Failed to get account data");
+    if (!dg__get_user_data(dg)) {
+        nob_log(NOB_ERROR, "Failed to get user data");
         return false;
     }
 
@@ -107,96 +101,85 @@ bool dg__login(degiro *dg, const char *username, const char *password, const cha
     return true;
 }
 
-bool dg__get_account_config()
-{
-    nob_log(NOB_INFO, "Getting account config...");
+bool dg__get_user_config() {
+    nob_log(NOB_INFO, "Getting user config...");
 
     CURLcode res;
 
-    if (!dgb.account_config.session_id)
-    {
+    if (!dgb.user_config.session_id) {
         nob_log(NOB_ERROR, "No session id defined");
         return false;
     }
 
-    dg__set_default_curl_headers(&dgb.curl, dgb.account_config.session_id);
-    dg__set_curl_url(&dgb.curl, format_string("%s%s", DEGIRO_BASE_URL, DEGIRO_GET_ACCOUNT_CONFIG_URL));
+    dg__set_default_curl_headers(&dgb.curl, dgb.user_config.session_id);
+    dg__set_curl_url(&dgb.curl, format_string("%s%s", DEGIRO_BASE_URL, DEGIRO_GET_USER_CONFIG_URL));
     dg__set_curl_payload(&dgb.curl, "");
     dg__set_curl_GET(&dgb.curl);
 
     res = dg__make_request(&dgb.curl);
-    if (res != CURLE_OK)
-    {
+    if (res != CURLE_OK) {
         nob_log(NOB_ERROR, "curl_easy_perform() failed: %s", curl_easy_strerror(res));
         return false;
     }
 
-    if (!dg__account_config_from_json_string(&dgb.account_config, dgb.curl.response.data))
-    {
-        nob_log(NOB_ERROR, "Failed to get account config");
+    if (!dg__user_config_from_json_string(&dgb.user_config, dgb.curl.response.data)) {
+        nob_log(NOB_ERROR, "Failed to get user config");
         return false;
     }
 
     return true;
 }
 
-bool dg__get_account_data(degiro *dg)
-{
+bool dg__get_user_data(degiro *dg) {
     CURLcode res;
 
-    nob_log(NOB_INFO, "Getting account info...");
-    if (!dgb.account_config.session_id)
-    {
+    nob_log(NOB_INFO, "Getting user info...");
+    if (!dgb.user_config.session_id) {
         nob_log(NOB_ERROR, "No session id defined");
         return false;
     }
 
-    dg__set_default_curl_headers(&dgb.curl, dgb.account_config.session_id);
+    dg__set_default_curl_headers(&dgb.curl, dgb.user_config.session_id);
     dg__set_curl_url(&dgb.curl, format_string("%sclient?sessionId=%s",
-                                              dgb.account_config.pa_url,
-                                              dgb.account_config.session_id));
+                                              dgb.user_config.pa_url,
+                                              dgb.user_config.session_id));
     dg__set_curl_payload(&dgb.curl, "");
     dg__set_curl_GET(&dgb.curl);
 
     res = dg__make_request(&dgb.curl);
-    if (res != CURLE_OK)
-    {
+    if (res != CURLE_OK) {
         nob_log(NOB_ERROR, "curl_easy_perform() failed: %s", curl_easy_strerror(res));
         return false;
     }
 
-    if (!dg__account_data_from_json_string(&dg->account_data, dgb.curl.response.data))
-    {
-        nob_log(NOB_ERROR, "Failed to get account info");
+    if (!dg__user_data_from_json_string(&dg->user_data, dgb.curl.response.data)) {
+        nob_log(NOB_ERROR, "Failed to get user info");
         return false;
     }
 
     return true;
 }
 
-bool dg__get_portfolio(degiro *dg)
-{
+bool dg__get_portfolio(degiro *dg) {
     CURLcode res;
 
     nob_log(NOB_INFO, "Getting portfolio");
-    if (!dgb.account_config.session_id)
-    {
+    if (!dgb.user_config.session_id) {
         nob_log(NOB_ERROR, "No session id defined");
         return false;
     }
 
-    dg__set_default_curl_headers(&dgb.curl, dgb.account_config.session_id);
+    dg__set_default_curl_headers(&dgb.curl, dgb.user_config.session_id);
     const char *url = format_string("%sv5/update/%d;jsessionid=%s?&portfolio=0",
-                                    dgb.account_config.trading_url,
-                                    dg->account_data.int_account,
-                                    dgb.account_config.session_id);
+                                    dgb.user_config.trading_url,
+                                    dg->user_data.int_account,
+                                    dgb.user_config.session_id);
     dg__set_curl_url(&dgb.curl, url);
     dg__set_curl_payload(&dgb.curl, "");
     dg__set_curl_GET(&dgb.curl);
 
     res = dg__make_request(&dgb.curl);
-    if (res != CURLE_OK)
-    {
+    if (res != CURLE_OK) {
         nob_log(NOB_ERROR, "curl_easy_perform() failed: %s", curl_easy_strerror(res));
         return false;
     }
@@ -205,19 +188,15 @@ bool dg__get_portfolio(degiro *dg)
 
     // Generate array of number-only ids (to ignore cash positions)
     size_t n_ids = 0;
-    for (size_t i = 0; i < dg->portfolio.count; i++)
-    {
-        if (is_only_numbers(dg->portfolio.items[i].id))
-        {
+    for (size_t i = 0; i < dg->portfolio.count; i++) {
+        if (is_only_numbers(dg->portfolio.items[i].id)) {
             n_ids++;
         }
     }
 
     int *ids = (int *)malloc(sizeof(int) * dg->portfolio.count);
-    for (size_t i = 0; i < dg->portfolio.count; i++)
-    {
-        if (is_only_numbers(dg->portfolio.items[i].id))
-        {
+    for (size_t i = 0; i < dg->portfolio.count; i++) {
+        if (is_only_numbers(dg->portfolio.items[i].id)) {
             ids[i] = atoi(dg->portfolio.items[i].id);
         }
     }
@@ -229,38 +208,33 @@ bool dg__get_portfolio(degiro *dg)
     return true;
 }
 
-bool dg__get_transactions(degiro *dg, dg_get_transactions_options options, dg_da_transactions *transactions)
-{
+bool dg__get_transactions(degiro *dg, dg_get_transactions_options options, dg_da_transactions *transactions) {
     nob_log(NOB_INFO, "Getting transactions...");
 
     CURLcode res;
 
     const char *group_transactions_by_order_str;
-    if (options.group_transactions_by_order)
-    {
+    if (options.group_transactions_by_order) {
         group_transactions_by_order_str = "true";
-    }
-    else
-    {
+    } else {
         group_transactions_by_order_str = "false";
     }
 
-    dg__set_default_curl_headers(&dgb.curl, dgb.account_config.session_id);
+    dg__set_default_curl_headers(&dgb.curl, dgb.user_config.session_id);
     const char *url = format_string("%s%s?fromDate=%s&toDate=%s&groupTransactionsByOrder=%s&intAccount=%d&sessionId=%s",
-                                    dgb.account_config.reporting_url,
+                                    dgb.user_config.reporting_url,
                                     DEGIRO_GET_TRANSACTIONS_URL,
                                     options.from_date,
                                     options.to_date,
                                     group_transactions_by_order_str,
-                                    dg->account_data.int_account,
-                                    dgb.account_config.session_id);
+                                    dg->user_data.int_account,
+                                    dgb.user_config.session_id);
     dg__set_curl_url(&dgb.curl, url);
     dg__set_curl_payload(&dgb.curl, "");
     dg__set_curl_GET(&dgb.curl);
 
     res = dg__make_request(&dgb.curl);
-    if (res != CURLE_OK)
-    {
+    if (res != CURLE_OK) {
         nob_log(NOB_ERROR, "curl_easy_perform() failed: %s", curl_easy_strerror(res));
         return false;
     }
@@ -269,8 +243,7 @@ bool dg__get_transactions(degiro *dg, dg_get_transactions_options options, dg_da
 
     // Get product info of the products in transactions
     int *ids = (int *)malloc(sizeof(int) * transactions->count);
-    for (size_t i = 0; i < transactions->count; i++)
-    {
+    for (size_t i = 0; i < transactions->count; i++) {
         ids[i] = transactions->items[i].product_id;
     }
     dg_products products = {0};
@@ -279,8 +252,7 @@ bool dg__get_transactions(degiro *dg, dg_get_transactions_options options, dg_da
     return true;
 }
 
-bool dg__get_products_info(degiro *dg, int *ids, size_t n_ids, dg_products *products)
-{
+bool dg__get_products_info(degiro *dg, int *ids, size_t n_ids, dg_products *products) {
     nob_log(NOB_INFO, "Getting product info for %zu products...", n_ids);
 
     // Make list of unique ids (required to make request valid)
@@ -293,13 +265,10 @@ bool dg__get_products_info(degiro *dg, int *ids, size_t n_ids, dg_products *prod
 
     nob_da_reserve(&unique_ids, n_ids);
 
-    for (size_t i = 0; i < n_ids; i++)
-    {
+    for (size_t i = 0; i < n_ids; i++) {
         bool already_in = false;
-        for (size_t j = 0; j < unique_ids.count; j++)
-        {
-            if (ids[i] == unique_ids.items[j])
-            {
+        for (size_t j = 0; j < unique_ids.count; j++) {
+            if (ids[i] == unique_ids.items[j]) {
                 already_in = true;
             }
         }
@@ -309,30 +278,27 @@ bool dg__get_products_info(degiro *dg, int *ids, size_t n_ids, dg_products *prod
     }
 
     nob_log(NOB_INFO, "Reduced to %zu unique ids", unique_ids.count);
-    if (unique_ids.count == 0)
-    {
+    if (unique_ids.count == 0) {
         nob_log(NOB_INFO, "No product info to load");
         return true;
     }
 
     CURLcode res;
 
-    if (!dgb.account_config.session_id)
-    {
+    if (!dgb.user_config.session_id) {
         nob_log(NOB_ERROR, "No session id defined, unable to make request to DeGiro");
         return false;
     }
 
-    dg__set_default_curl_headers(&dgb.curl, dgb.account_config.session_id);
+    dg__set_default_curl_headers(&dgb.curl, dgb.user_config.session_id);
     const char *url = format_string("%sv5/products/info?intAccount=%d&sessionId=%s",
-                                    dgb.account_config.product_search_url,
-                                    dg->account_data.int_account,
-                                    dgb.account_config.session_id);
+                                    dgb.user_config.product_search_url,
+                                    dg->user_data.int_account,
+                                    dgb.user_config.session_id);
     dg__set_curl_url(&dgb.curl, url);
 
     cJSON *array = cJSON_CreateArray();
-    for (size_t i = 0; i < unique_ids.count; i++)
-    {
+    for (size_t i = 0; i < unique_ids.count; i++) {
         cJSON_AddItemToArray(array, cJSON_CreateString(format_string("%d", unique_ids.items[i])));
     }
     const char *payload = cJSON_PrintUnformatted(array);
@@ -340,50 +306,45 @@ bool dg__get_products_info(degiro *dg, int *ids, size_t n_ids, dg_products *prod
     dg__set_curl_POST(&dgb.curl);
 
     res = dg__make_request(&dgb.curl);
-    if (res != CURLE_OK)
-    {
+    if (res != CURLE_OK) {
         nob_log(NOB_ERROR, "curl_easy_perform() failed: %s", curl_easy_strerror(res));
         return false;
     }
 
-    if (!dg__products_from_json_string(products, dgb.curl.response.data))
-    {
+    if (!dg__products_from_json_string(products, dgb.curl.response.data)) {
         nob_log(NOB_ERROR, "Failed to parse product from response");
         return false;
     }
 
     // Add products to registry for later reference
-    for (size_t i = 0; i < products->count; i++)
-    {
+    for (size_t i = 0; i < products->count; i++) {
         dg__add_product_to_library(&dg->products, &products->items[i]);
     }
 
     return true;
 }
 
-bool dg__get_product_chart(dg_product_chart *result, dg_product_chart_options opts)
-{
+bool dg__get_product_chart(dg_product_chart *result, dg_product_chart_options opts) {
     // https://charting.vwdservices.com/hchart/v1/deGiro/data.js?requestid=1&resolution=P1D&culture=nl-NL&period=P50Y&series=issueid%3A485013849&series=price%3Aissueid%3A485013849&format=json&callback=vwd.hchart.seriesRequestManager.sync_response&userToken=4626342&tz=Europe%2FAmsterdam
 
     result->product = opts.product;
 
     const char *resolution = "1D";
-    switch (opts.period)
-    {
-    case PERIOD_1D:
-        resolution = "T1M";
-        break;
-    case PERIOD_1W:
-        resolution = "T30M";
-        break;
-    case PERIOD_1M:
-        resolution = "T2H";
-        break;
-    case PERIOD_1Y:
-        resolution = "1D";
-        break;
-    default:
-        NOB_UNREACHABLE("Undefined period");
+    switch (opts.period) {
+        case PERIOD_1D:
+            resolution = "T1M";
+            break;
+        case PERIOD_1W:
+            resolution = "T30M";
+            break;
+        case PERIOD_1M:
+            resolution = "T2H";
+            break;
+        case PERIOD_1Y:
+            resolution = "1D";
+            break;
+        default:
+            NOB_UNREACHABLE("Undefined period");
     }
 
     nob_log(NOB_INFO, "Getting price info with the following options:");
@@ -397,7 +358,7 @@ bool dg__get_product_chart(dg_product_chart *result, dg_product_chart_options op
     nob_sb_appendf(&url, "series=price:%s:%s&", opts.product.vwd_identifier_type, opts.product.vwd_id);
     nob_sb_appendf(&url, "period=P%s&", dg_chart_period_to_str(opts.period));
     nob_sb_appendf(&url, "resolution=P%s&", resolution);
-    nob_sb_appendf(&url, "userToken=%d&", dgb.account_config.client_id);
+    nob_sb_appendf(&url, "userToken=%d&", dgb.user_config.client_id);
     nob_sb_appendf(&url, "culture=nl-NL&");
     nob_sb_appendf(&url, "format=json&");
     nob_sb_appendf(&url, "tz=Europe/Amsterdam");
@@ -411,8 +372,7 @@ bool dg__get_product_chart(dg_product_chart *result, dg_product_chart_options op
     dg__make_request(&dgb.curl);
 
     cJSON *json = cJSON_Parse(dgb.curl.response.data);
-    if (json == NULL)
-    {
+    if (json == NULL) {
         nob_log(NOB_ERROR, "Error parsing JSON");
         return false;
     }
@@ -420,8 +380,7 @@ bool dg__get_product_chart(dg_product_chart *result, dg_product_chart_options op
     return dg__parse_chart_response(json, result);
 }
 
-void dg__cleanup()
-{
+void dg__cleanup() {
     nob_log(NOB_INFO, "Cleaning up degiro");
     curl_easy_cleanup(dgb.curl.curl);
     curl_global_cleanup();
