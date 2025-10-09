@@ -365,10 +365,7 @@ bool dg__get_product_chart(dg_product_chart *result, dg_product_chart_options op
     nob_sb_append_null(&url);
 
     dg__set_curl_url(&dgb.curl, url.items);
-
     dg__set_curl_GET(&dgb.curl);
-    // curl_easy_setopt(dgb.curl.curl, CURLOPT_HTTPHEADER, NULL);
-
     dg__make_request(&dgb.curl);
 
     cJSON *json = cJSON_Parse(dgb.curl.response.data);
@@ -378,6 +375,28 @@ bool dg__get_product_chart(dg_product_chart *result, dg_product_chart_options op
     }
 
     return dg__parse_chart_response(json, result);
+}
+
+bool dg__get_account_overview(degiro *dg, dg_get_account_overview_options options, dg_account_overview *account_overview) {
+    nob_log(NOB_INFO, "Getting account overview");
+
+    options.from_date = "01/01/1900";
+    options.to_date = "01/01/2100";
+
+    Nob_String_Builder url = {0};
+    nob_sb_appendf(&url, "%s", DEGIRO_BASE_URL);
+    nob_sb_appendf(&url, "%s?", DEGIRO_GET_ACCOUNT_OVERVIEW_URL);
+    nob_sb_appendf(&url, "fromDate=%s&", options.from_date);
+    nob_sb_appendf(&url, "toDate=%s&", options.to_date);
+    nob_sb_appendf(&url, "intAccount=%d&", dg->user_data.int_account);
+    nob_sb_appendf(&url, "sessionId=%s&", dgb.user_config.session_id);
+    nob_sb_append_null(&url);
+
+    dg__set_curl_url(&dgb.curl, url.items);
+    dg__set_curl_GET(&dgb.curl);
+    dg__make_request(&dgb.curl);
+
+    return dg__account_overview_from_json_string(account_overview, dgb.curl.response.data);
 }
 
 void dg__cleanup() {

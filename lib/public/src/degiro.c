@@ -38,8 +38,9 @@ bool dg_get_transactions(degiro *dg, dg_get_transactions_options options, dg_tra
     return true;
 }
 
-// bool dg_get_account_overview(degiro *dg, dg_get_account_overview_options options, dg_account_overview *account_overview) {
-// }
+bool dg_get_account_overview(degiro *dg, dg_get_account_overview_options options, dg_account_overview *account_overview) {
+    return dg__get_account_overview(dg, options, account_overview);
+}
 
 bool dg_get_product_chart(dg_product_chart *result, dg_product_chart_options opts) {
     return dg__get_product_chart(result, opts);

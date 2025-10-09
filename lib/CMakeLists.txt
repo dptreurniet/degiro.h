@@ -8,13 +8,14 @@ set(SOURCES
     public/src/degiro.c
     public/src/utils.c
 
-    private/src/degiro_main.c
+    private/src/degiro_account.c
     private/src/degiro_curl.c
-    private/src/degiro_user.c
+    private/src/degiro_main.c
     private/src/degiro_portfolio.c
+    private/src/degiro_price.c
     private/src/degiro_products.c
     private/src/degiro_transactions.c
-    private/src/degiro_price.c
+    private/src/degiro_user.c
     private/src/degiro_utils.c
 )
 
