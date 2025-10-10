@@ -1,51 +1,85 @@
 #include "degiro.h"
 
-#include <stdlib.h>
+#include "defines.h"
+#include "dg_curl.h"
+#include "dg_main.h"
+#include "dg_utils.h"
 
-#include "degiro_main.h"
+#define NOB_IMPLEMENTATION
 #include "nob.h"
 
-bool dg_init() {
-    return dg__init();
-}
+bool dg_init(dg_context *ctx) {
+    nob_log(NOB_INFO, "Initializing DeGiro");
+    curl_global_init(CURL_GLOBAL_DEFAULT);
 
-bool dg_login(degiro *dg, const char *username, const char *password, const char *totp) {
-    return dg__login(dg, username, password, totp);
-}
-
-bool dg_get_portfolio(degiro *dg) {
-    return dg__get_portfolio(dg);
-}
-
-bool dg_get_transactions(degiro *dg, dg_get_transactions_options options, dg_transactions *transactions) {
-    dg_da_transactions t = {0};
-    if (!dg__get_transactions(dg, options, &t)) {
-        nob_log(NOB_ERROR, "Failed to get transactions");
+    ctx->curl.curl = curl_easy_init();
+    if (!ctx->curl.curl) {
+        nob_log(NOB_ERROR, "Failed to init Curl");
         return false;
     }
 
-    transactions->items = (dg_transaction *)malloc(sizeof(dg_transaction) * t.count);
-    if (!transactions->items) {
-        nob_log(NOB_ERROR, "Failed to allocate memory for transactions");
-        return false;
-    }
-
-    for (size_t i = 0; i < t.count; ++i)
-        transactions->items[i] = t.items[i];
-
-    transactions->count = t.count;
+    curl_easy_setopt(ctx->curl.curl, CURLOPT_WRITEFUNCTION, dg__curl_callback);
+    curl_easy_setopt(ctx->curl.curl, CURLOPT_WRITEDATA, &ctx->curl.response);
+    dg__set_default_curl_headers(ctx);
 
     return true;
 }
 
-bool dg_get_account_overview(degiro *dg, dg_get_account_overview_options options, dg_account_overview *account_overview) {
-    return dg__get_account_overview(dg, options, account_overview);
+bool dg_login(dg_context *ctx, dg_login_data login) {
+    nob_log(NOB_INFO, "Logging in at DeGiro");
+    CURLcode res;
+    ctx->logged_in = false;
+
+    dg__set_curl_POST(ctx);
+    dg__set_default_curl_headers(ctx);
+    if (!dg__set_curl_url(ctx, format_string("%s%s/totp", DEGIRO_BASE_URL, DEGIRO_LOGIN_URL))) return false;
+    dg__set_curl_payload(ctx, format_string("{\"username\":\"%s\",\"password\":\"%s\",\"oneTimePassword\":\"%s\"}",
+                                            login.username, login.password, login.totp));
+
+    res = dg__make_request(ctx);
+    if (res != CURLE_OK) {
+        nob_log(NOB_ERROR, "Curl request failed: %s", curl_easy_strerror(res));
+        return false;
+    }
+
+    dg_login_response response = {0};
+    if (!dg__parse_login_response(ctx, &response)) {
+        nob_log(NOB_ERROR, "Failed to parse login response");
+        return false;
+    }
+
+    if (response.status != 0) {
+        nob_log(NOB_ERROR, "Login failed: %s", response.status_text);
+        return false;
+    } else {
+        nob_log(NOB_INFO, "Credentials OK");
+    }
+
+    // Automatically get user_config after login, as this struct stores the session ID and contains URLs for subsequent API calls
+    ctx->user_config.session_id = response.session_id;
+    dg__set_default_curl_headers(ctx);
+    if (!dg__set_curl_url(ctx, format_string("%s%s", DEGIRO_BASE_URL, DEGIRO_GET_USER_CONFIG_URL))) return false;
+    dg__set_curl_payload(ctx, "");
+    dg__set_curl_GET(ctx);
+
+    res = dg__make_request(ctx);
+    if (res != CURLE_OK) {
+        nob_log(NOB_ERROR, "Curl request failed: %s", curl_easy_strerror(res));
+        return false;
+    }
+
+    if (!dg__parse_user_config(ctx)) {
+        nob_log(NOB_ERROR, "Failed to parse user config");
+        return false;
+    }
+    ctx->logged_in = true;
+
+    nob_log(NOB_INFO, "Successful login");
+    return true;
 }
 
-bool dg_get_product_chart(dg_product_chart *result, dg_product_chart_options opts) {
-    return dg__get_product_chart(result, opts);
-}
-
-void dg_cleanup() {
-    dg__cleanup();
+void dg_cleanup(dg_context *ctx) {
+    nob_log(NOB_INFO, "Cleaning up degiro lib");
+    curl_easy_cleanup(ctx->curl.curl);
+    curl_global_cleanup();
 }

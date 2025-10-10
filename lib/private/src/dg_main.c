@@ -1,165 +1,31 @@
-#include "degiro_main.h"
+#include "dg_main.h"
 
-#include <ctype.h>
+#include <cjson/cJSON.h>
 
-#include "defines.h"
 #include "degiro.h"
-#include "degiro_utils.h"
-
-#ifndef NOB_IMPLEMENTATION
-#define NOB_IMPLEMENTATION
-#endif
-#include "degiro_price.h"
+#include "dg_utils.h"
 #include "nob.h"
-#include "secrets.h"  //temp
-#include "utils.h"
 
-dg_backend dgb = {0};
-
-bool dg__init() {
-    nob_log(NOB_INFO, "Initializing DeGiro...");
-    curl_global_init(CURL_GLOBAL_DEFAULT);
-
-    dgb.curl.curl = curl_easy_init();
-    if (!dgb.curl.curl) {
-        nob_log(NOB_ERROR, "Failed to init Curl");
+bool dg__parse_login_response(dg_context *ctx, dg_login_response *response) {
+    cJSON *json = cJSON_Parse(ctx->curl.response.data);
+    if (json == NULL) {
+        nob_log(NOB_ERROR, "Failed to parse JSON");
         return false;
     }
 
-    curl_easy_setopt(dgb.curl.curl, CURLOPT_WRITEFUNCTION, dg__curl_callback);
-    curl_easy_setopt(dgb.curl.curl, CURLOPT_WRITEDATA, &dgb.curl.response);
-    dg__set_default_curl_headers(&dgb.curl, dgb.user_config.session_id);
-    // curl_easy_setopt(dgb.curl.curl, CURLOPT_VERBOSE, 1L);
+    parse_bool(json, "captchaRequired", &response->captcha_required);
+    parse_bool(json, "isPassCodeEnabled", &response->is_pass_code_enabled);
+    parse_string(json, "locale", &response->locale);
+    parse_string(json, "redirectUrl", &response->redirect_url);
+    parse_string(json, "sessionId", &response->session_id);
+    parse_int(json, "status", &response->status);
+    parse_string(json, "statusText", &response->status_text);
 
-    nob_log(NOB_INFO, "DeGiro initialized");
+    cJSON_Delete(json);
     return true;
 }
 
-bool dg__login(degiro *dg, const char *username, const char *password, const char *totp) {
-    nob_log(NOB_INFO, "Logging in on DeGiro...");
-
-    dg->logged_in = false;
-    CURLcode res;
-    dg_login_response response;
-
-    // -------- Part 1: username / password --------
-
-    dg__set_curl_POST(&dgb.curl);
-    dg__set_default_curl_headers(&dgb.curl, dgb.user_config.session_id);
-    // dg__set_curl_url(&dgb.curl, format_string("%s%s", DEGIRO_BASE_URL, DEGIRO_LOGIN_URL));
-
-    // const char *payload = format_string("{\"username\":\"%s\",\"password\":\"%s\"}", username, password);
-    // dg__set_curl_payload(&dgb.curl, payload);
-
-    // res = dg__make_request(&dgb.curl);
-    // if (res != CURLE_OK)
-    // {
-    //     nob_log(NOB_ERROR, "curl_easy_perform() failed: %s", curl_easy_strerror(res));
-    //     return false;
-    // }
-
-    // dg__login_response_from_json_string(&response, dgb.curl.response.data);
-    // if (response.status != 6)
-    // {
-    //     nob_log(NOB_ERROR, "Unexpected reponse status (%d), aborting login", response.status);
-    //     return false;
-    // }
-
-    // -------- Part 2: time-based one-time password --------
-    dg__set_curl_url(&dgb.curl, format_string("%s%s/totp", DEGIRO_BASE_URL, DEGIRO_LOGIN_URL));
-
-    const char *payload = format_string("{\"username\":\"%s\",\"password\":\"%s\",\"oneTimePassword\":\"%s\"}", username, password, totp);
-    curl_easy_setopt(dgb.curl.curl, CURLOPT_POSTFIELDS, payload);
-
-    res = dg__make_request(&dgb.curl);
-    if (res != CURLE_OK) {
-        nob_log(NOB_ERROR, "curl_easy_perform() failed: %s", curl_easy_strerror(res));
-        return false;
-    }
-
-    dg__login_response_from_json_string(&response, dgb.curl.response.data);
-    if (response.status != 0) {
-        nob_log(NOB_ERROR, "Login failed: %s", response.status_text);
-        return false;
-    }
-
-    dgb.user_config.session_id = response.session_id;  // Store session id to use in subsequent HTTP requests
-    nob_log(NOB_INFO, "Got session id: \"%s\"", dgb.user_config.session_id);
-
-    if (!dg__get_user_config(&dgb)) {
-        nob_log(NOB_ERROR, "Failed to get user config");
-        return false;
-    }
-
-    if (!dg__get_user_data(dg)) {
-        nob_log(NOB_ERROR, "Failed to get user data");
-        return false;
-    }
-
-    dg->logged_in = true;
-    nob_log(NOB_INFO, "Login successful");
-    return true;
-}
-
-bool dg__get_user_config() {
-    nob_log(NOB_INFO, "Getting user config...");
-
-    CURLcode res;
-
-    if (!dgb.user_config.session_id) {
-        nob_log(NOB_ERROR, "No session id defined");
-        return false;
-    }
-
-    dg__set_default_curl_headers(&dgb.curl, dgb.user_config.session_id);
-    dg__set_curl_url(&dgb.curl, format_string("%s%s", DEGIRO_BASE_URL, DEGIRO_GET_USER_CONFIG_URL));
-    dg__set_curl_payload(&dgb.curl, "");
-    dg__set_curl_GET(&dgb.curl);
-
-    res = dg__make_request(&dgb.curl);
-    if (res != CURLE_OK) {
-        nob_log(NOB_ERROR, "curl_easy_perform() failed: %s", curl_easy_strerror(res));
-        return false;
-    }
-
-    if (!dg__user_config_from_json_string(&dgb.user_config, dgb.curl.response.data)) {
-        nob_log(NOB_ERROR, "Failed to get user config");
-        return false;
-    }
-
-    return true;
-}
-
-bool dg__get_user_data(degiro *dg) {
-    CURLcode res;
-
-    nob_log(NOB_INFO, "Getting user info...");
-    if (!dgb.user_config.session_id) {
-        nob_log(NOB_ERROR, "No session id defined");
-        return false;
-    }
-
-    dg__set_default_curl_headers(&dgb.curl, dgb.user_config.session_id);
-    dg__set_curl_url(&dgb.curl, format_string("%sclient?sessionId=%s",
-                                              dgb.user_config.pa_url,
-                                              dgb.user_config.session_id));
-    dg__set_curl_payload(&dgb.curl, "");
-    dg__set_curl_GET(&dgb.curl);
-
-    res = dg__make_request(&dgb.curl);
-    if (res != CURLE_OK) {
-        nob_log(NOB_ERROR, "curl_easy_perform() failed: %s", curl_easy_strerror(res));
-        return false;
-    }
-
-    if (!dg__user_data_from_json_string(&dg->user_data, dgb.curl.response.data)) {
-        nob_log(NOB_ERROR, "Failed to get user info");
-        return false;
-    }
-
-    return true;
-}
-
+/*
 bool dg__get_portfolio(degiro *dg) {
     CURLcode res;
 
@@ -399,8 +265,5 @@ bool dg__get_account_overview(degiro *dg, dg_get_account_overview_options option
     return dg__account_overview_from_json_string(account_overview, dgb.curl.response.data);
 }
 
-void dg__cleanup() {
-    nob_log(NOB_INFO, "Cleaning up degiro");
-    curl_easy_cleanup(dgb.curl.curl);
-    curl_global_cleanup();
-}
+
+*/

@@ -1,4 +1,4 @@
-#include "degiro_utils.h"
+#include "dg_utils.h"
 
 #include <cjson/cJSON.h>
 #include <ctype.h>
@@ -9,6 +9,16 @@
 
 #include "defines.h"
 #include "nob.h"
+
+void dump_to_file(const char *str, const char *filename) {
+    FILE *file = fopen(filename, "w");
+    if (file == NULL) {
+        perror("Error opening file");
+        return;
+    }
+    fprintf(file, "%s", str);
+    fclose(file);
+}
 
 const char *format_string(const char *format, ...) {
     va_list args;
@@ -46,9 +56,12 @@ bool parse_string(cJSON *root, const char *json_key, char **destination) {
         return false;
     }
 
+    if (*destination != NULL) {
+        free(*destination);
+    }
+
     if (cJSON_IsString(obj) && (obj->valuestring != NULL)) {
-        *(destination) = (char *)malloc(strlen(obj->valuestring) + 1);
-        strcpy(*(destination), obj->valuestring);
+        *destination = strdup(obj->valuestring);
     } else {
         nob_log(NOB_WARNING, "Tried to parse \"%s\" as string, but it is %s", json_key, cJSON_GetTypeString(obj));
         return false;

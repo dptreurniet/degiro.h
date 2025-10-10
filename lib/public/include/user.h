@@ -1,21 +1,12 @@
 #pragma once
 
+#include <stdbool.h>
+
+// Forward-declare context
+struct dg_context;
+typedef struct dg_context dg_context;
+
 typedef struct dg_user_data {
-    struct
-    {
-        char *city;
-        char *country;
-        char *street_address;
-        char *street_address_number;
-        char *zip;
-    } address;
-    struct
-    {
-        int bank_account_id;
-        char *bic;
-        char *iban;
-        char *status;
-    } bank_account;
     bool can_upgrade;
     char *cellphone_number;
     char *client_role;
@@ -24,17 +15,6 @@ typedef struct dg_user_data {
     char *display_name;
     char *effective_client_role;
     char *email;
-    struct
-    {
-        char *country_of_birth;
-        char *date_of_birth;
-        char *display_name;
-        char *first_name;
-        char *gender;
-        char *last_name;
-        char *nationality;
-        char *place_of_birth;
-    } first_contact;
     int id;
     int int_account;
     bool is_allocation_available;
@@ -46,4 +26,32 @@ typedef struct dg_user_data {
     char *locale;
     char *member_code;
     char *username;
+
+    struct {
+        char *city;
+        char *country;
+        char *street_address;
+        char *street_address_number;
+        char *zip;
+    } address;
+
+    struct {
+        int bank_account_id;
+        char *bic;
+        char *iban;
+        char *status;
+    } bank_account;
+
+    struct {
+        char *country_of_birth;
+        char *date_of_birth;
+        char *display_name;
+        char *first_name;
+        char *gender;
+        char *last_name;
+        char *nationality;
+        char *place_of_birth;
+    } first_contact;
 } dg_user_data;
+
+bool dg_get_user_data(dg_context *ctx);

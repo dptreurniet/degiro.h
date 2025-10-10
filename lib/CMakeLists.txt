@@ -6,22 +6,23 @@ find_package(cJSON CONFIG REQUIRED)
 
 set(SOURCES
     public/src/degiro.c
-    public/src/utils.c
+    public/src/user.c
+    # public/src/utils.c
 
-    private/src/degiro_account.c
-    private/src/degiro_curl.c
-    private/src/degiro_main.c
-    private/src/degiro_portfolio.c
-    private/src/degiro_price.c
-    private/src/degiro_products.c
-    private/src/degiro_transactions.c
-    private/src/degiro_user.c
-    private/src/degiro_utils.c
+    private/src/dg_curl.c
+    private/src/dg_utils.c
+    private/src/dg_main.c
+    private/src/dg_user.c
+    # private/src/degiro_account.c
+    # private/src/degiro_portfolio.c
+    # private/src/degiro_price.c
+    # private/src/degiro_products.c
+    # private/src/degiro_transactions.c
 )
 
 set(HEADERS
     public/include/degiro.h
-    public/include/utils.h
+    # public/include/utils.h
 )
 
 
@@ -32,4 +33,4 @@ target_include_directories(degiro PRIVATE private/include)
 
 target_link_libraries(degiro PRIVATE CURL::libcurl cjson)
 
-target_compile_options(degiro PRIVATE -Wno-incompatible-pointer-types -Wall -Wextra)
+target_compile_options(degiro PRIVATE -Wall -Wextra)
