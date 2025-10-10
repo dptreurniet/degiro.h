@@ -45,3 +45,6 @@ typedef struct dg_login_data {
 bool dg_init(dg_context *ctx);
 bool dg_login(dg_context *ctx, dg_login_data login);
 void dg_cleanup(dg_context *ctx);
+
+// Include other headers to allow users to only include "degiro.h"
+#include "transactions.h"

@@ -72,9 +72,16 @@ bool dg_login(dg_context *ctx, dg_login_data login) {
         nob_log(NOB_ERROR, "Failed to parse user config");
         return false;
     }
-    ctx->logged_in = true;
 
+    ctx->logged_in = true;
     nob_log(NOB_INFO, "Successful login");
+
+    // Get account_info as well, because some calls require the int_account number that is stored in there.
+    if (!dg_get_user_data(ctx)) {
+        nob_log(NOB_ERROR, "Failed to get user data");
+        return false;
+    }
+
     return true;
 }
 

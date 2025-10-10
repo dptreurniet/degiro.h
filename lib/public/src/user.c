@@ -1,6 +1,5 @@
 #include "user.h"
 
-#include "defines.h"
 #include "dg_main.h"
 #include "dg_user.h"
 #include "dg_utils.h"

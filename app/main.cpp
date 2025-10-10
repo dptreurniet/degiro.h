@@ -340,15 +340,16 @@ void render_products() {
     }
 }
 
+*/
 void render_transactions() {
     {  // -------- Transactions list --------
         static dg_transactions transactions = {0};
 
         if (ImGui::Button("Get all")) {
             dg_get_transactions_options opts = {
-                .from_date = "1900-01-01",
-                .to_date = "2100-01-01",
-                .group_transactions_by_order = true};
+                .from_date = {.tm_mday = 1},
+                .to_date = {.tm_mday = 1, .tm_year = 200},
+                .group_by_order = true};
 
             if (!dg_get_transactions(&dg, opts, &transactions)) {
                 fprintf(stderr, "Failed to get transactions\n");
@@ -379,13 +380,13 @@ void render_transactions() {
 
                 for (size_t i = 0; i < transactions.count; ++i) {
                     dg_transaction t = transactions.items[i];
-                    dg_product product = {0};
+                    // dg_product product = {0};
                     ImGui::PushID(i);
 
-                    if (!dg_get_product_by_id(&dg, t.product_id, &product)) {
-                        fprintf(stderr, "Failed to find product with id %d in library\n", t.id);
-                        continue;
-                    }
+                    // if (!dg_get_product_by_id(&dg, t.product_id, &product)) {
+                    //     fprintf(stderr, "Failed to find product with id %d in library\n", t.id);
+                    //     continue;
+                    // }
 
                     ImGui::TableNextRow();
                     ImGui::TableSetColumnIndex(0);
@@ -410,7 +411,7 @@ void render_transactions() {
                     ImGui::Text("%d", abs(t.quantity));
 
                     ImGui::TableNextColumn();
-                    ImGui::Text("%s  ", product.name);
+                    ImGui::Text("%d  ", t.id);
 
                     ImGui::TableNextColumn();
                     ImGui::Text("%.2f  ", t.price);
@@ -424,175 +425,7 @@ void render_transactions() {
             }
         }
     }
-
-    {  // -------- Cash order list --------
-        static dg_account_overview acc_overview = {0};
-
-        if (ImGui::Button("Get account overview")) {
-            dg_get_account_overview_options opts = {0};
-            dg_get_account_overview(&dg, opts, &acc_overview);
-        }
-
-        if (acc_overview.cash_moves.items == 0)
-            ImGui::Text("No cash moves loaded yet");
-
-        // End-of-day plot
-        if (acc_overview.cash_moves.count > 0) {
-            time_t unix_start = dg_time_string_to_unix_timestamp(acc_overview.cash_moves.items[0].date);
-            // time_t unix_end = dg_time_string_to_unix_timestamp(acc_overview.cash_moves.items[0].date);
-            for (size_t i = 0; i < acc_overview.cash_moves.count; ++i) {
-                time_t unix_date = dg_time_string_to_unix_timestamp(acc_overview.cash_moves.items[i].date);
-                if (unix_date < unix_start) unix_start = unix_date;
-                // if (unix_date > unix_end) unix_end = unix_date;
-            }
-            unix_start = (unix_start / 86400) * 86400;
-            time_t unix_end = (time(nullptr) / 86400) * 86400;
-            // unix_end = ((unix_end / 86400) + 1) * 86400;
-
-            double diff = difftime(unix_start, unix_end);
-            int n_days = (int)std::abs(diff / 86400) + 1;
-
-            double *xs = (double *)malloc(sizeof(double) * n_days);
-            double *ys = (double *)malloc(sizeof(double) * n_days);
-            ys[0] = 0;
-            size_t i_move = acc_overview.cash_moves.count - 1;
-            for (int i = 0; i < n_days; ++i) {
-                xs[i] = (double)(unix_start + i * 86400);
-                printf("- day %d: unix: %.0f\n", i, xs[i]);
-                if (i > 0) ys[i] = ys[i - 1];
-                for (; i_move >= 0; --i_move) {
-                    if (i_move > acc_overview.cash_moves.count) break;  // needed because size_t wraps around when reaching -1
-                    printf("%ld\n", i_move);
-                    dg_cash_move move = acc_overview.cash_moves.items[i_move];
-                    time_t unix_move = dg_time_string_to_unix_timestamp(move.date);
-                    printf("--- unix_move:   %ld\n", unix_move);
-                    if (unix_move < xs[i]) {
-                        ys[i] = move.balance.total;
-                        printf("--- balance: %.2f\n", ys[i]);
-                    } else
-                        break;
-                }
-            }
-
-            if (ImPlot::BeginPlot("Cash")) {
-                ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
-                ImPlot::GetStyle().Use24HourClock = true;
-
-                ImPlot::SetupAxesLimits(xs[0] - 86400, xs[n_days - 1] + 86400, 0, 1000, ImPlotCond_Always);
-
-                // ImPlot::SetupAxes("Days", "Price");
-                // ImPlot::SetupAxesLimits(0, 100, 0, 500);
-                ImPlot::PlotStairs("Cash", xs, ys, n_days, ImPlotStairsFlags_PreStep | ImPlotStairsFlags_Shaded);
-                ImPlot::PlotStairs("Cash", xs, ys, n_days, ImPlotStairsFlags_PreStep);
-                ImPlot::EndPlot();
-            }
-        }
-
-// Plot
-#ifdef PLOT
-        size_t n_moves = acc_overview.cash_moves.count;
-        double *timestamps = (double *)malloc(sizeof(double) * n_moves);
-        double *cash_positions = (double *)malloc(sizeof(double) * n_moves);
-
-        for (size_t i = 0; i < n_moves; ++i) {
-            timestamps[i] = (double)dg_time_string_to_unix_timestamp(acc_overview.cash_moves.items[i].date);
-            cash_positions[i] = acc_overview.cash_moves.items[i].balance.total;
-        }
-
-        if (ImPlot::BeginPlot("Cash")) {
-            ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
-            ImPlot::GetStyle().Use24HourClock = true;
-
-            ImPlot::SetupAxesLimits(timestamps[0], timestamps[n_moves - 1], 0, 1000, ImPlotCond_Always);
-
-            // ImPlot::SetupAxes("Days", "Price");
-            // ImPlot::SetupAxesLimits(0, 100, 0, 500);
-            ImPlot::PlotStairs("Cash", timestamps, cash_positions, n_moves);
-            ImPlot::EndPlot();
-        }
-#endif
-
-// Table
-#ifdef TABLE
-        if (false) {
-            ImGuiTableFlags table_flags = 0;
-            table_flags |= ImGuiTableFlags_SizingFixedFit;
-            table_flags |= ImGuiTableFlags_NoHostExtendX;
-            table_flags |= ImGuiTableFlags_RowBg;
-            table_flags |= ImGuiTableFlags_BordersOuter;
-            table_flags |= ImGuiTableFlags_BordersV;
-            table_flags |= ImGuiTableFlags_NoBordersInBody;
-            table_flags |= ImGuiTableFlags_ScrollY;
-
-            if (ImGui::BeginTable("transactions", 7, table_flags)) {
-                ImGui::TableSetupColumn("Date");
-                ImGui::TableSetupColumn("Unix");
-                ImGui::TableSetupColumn("Type");
-                ImGui::TableSetupColumn("Description");
-                ImGui::TableSetupColumn("Mutation");
-                ImGui::TableSetupColumn("Total");
-                ImGui::TableSetupColumn("ID");
-                ImGui::TableSetupScrollFreeze(0, 1);  // Keep header always visible
-                ImGui::TableHeadersRow();
-
-                for (size_t i = 0; i < acc_overview.cash_moves.count; ++i) {
-                    dg_cash_move move = acc_overview.cash_moves.items[i];
-                    ImGui::PushID(i);
-
-                    ImGui::TableNextRow();
-                    ImGui::TableSetColumnIndex(0);
-                    ImGui::Text("%s  ", move.date);
-
-                    ImGui::TableNextColumn();
-                    ImGui::Text("%ld  ", (long)dg_time_string_to_unix_timestamp(move.date));
-
-                    ImGui::TableNextColumn();
-                    const char *type_str;
-                    switch (move.type) {
-                        case DG_MOVE_TYPE_TRANSACTION:
-                            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, .7, 0, 1));
-                            type_str = "TRANSACTION";
-                            break;
-                        case DG_MOVE_TYPE_FLATEX_CASH_SWEEP:
-                            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(.3, .3, .3, 1));
-                            type_str = "BACK-END";
-                            break;
-                        case DG_MOVE_TYPE_PAYMENT:
-                            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(.7, 0, 0, 1));
-                            type_str = "PAYMENT";
-                            break;
-                        case DG_MOVE_TYPE_CASH_TRANSATION:
-                            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, .7, 1));
-                            type_str = "CASH";
-                            break;
-                        default:
-                            type_str = "???";
-                    }
-                    ImGui::Button(type_str, ImVec2(100, 0));
-                    ImGui::PopStyleColor();
-
-                    ImGui::TableNextColumn();
-                    ImGui::Text("%s", move.description);
-
-                    ImGui::TableNextColumn();
-                    ImGui::Text("%.2f  ", move.change);
-
-                    ImGui::TableNextColumn();
-                    ImGui::Text("%.2f  ", move.balance.total);
-
-                    ImGui::TableNextColumn();
-                    ImGui::Text("%lld", move.id);
-
-                    ImGui::PopID();
-                }
-                ImGui::EndTable();
-            }
-        }
-#endif
-    }
 }
-
-*/
 
 // dg_get_transactions_options options = {
 //     .from_date = "1900-01-01",
@@ -656,7 +489,7 @@ void render_app() {
                 ImGui::EndTabItem();
             }
             if (ImGui::BeginTabItem("Transactions")) {
-                // render_transactions();
+                render_transactions();
                 ImGui::EndTabItem();
             }
             if (ImGui::BeginTabItem("Products")) {

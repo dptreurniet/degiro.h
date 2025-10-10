@@ -74,50 +74,6 @@ bool dg__get_portfolio(degiro *dg) {
     return true;
 }
 
-bool dg__get_transactions(degiro *dg, dg_get_transactions_options options, dg_da_transactions *transactions) {
-    nob_log(NOB_INFO, "Getting transactions...");
-
-    CURLcode res;
-
-    const char *group_transactions_by_order_str;
-    if (options.group_transactions_by_order) {
-        group_transactions_by_order_str = "true";
-    } else {
-        group_transactions_by_order_str = "false";
-    }
-
-    dg__set_default_curl_headers(&dgb.curl, dgb.user_config.session_id);
-    const char *url = dg__format_string("%s%s?fromDate=%s&toDate=%s&groupTransactionsByOrder=%s&intAccount=%d&sessionId=%s",
-                                    dgb.user_config.reporting_url,
-                                    DEGIRO_GET_TRANSACTIONS_URL,
-                                    options.from_date,
-                                    options.to_date,
-                                    group_transactions_by_order_str,
-                                    dg->user_data.int_account,
-                                    dgb.user_config.session_id);
-    dg__set_curl_url(&dgb.curl, url);
-    dg__set_curl_payload(&dgb.curl, "");
-    dg__set_curl_GET(&dgb.curl);
-
-    res = dg__make_request(&dgb.curl);
-    if (res != CURLE_OK) {
-        nob_log(NOB_ERROR, "curl_easy_perform() failed: %s", curl_easy_strerror(res));
-        return false;
-    }
-
-    dg__transactions_from_json_str(transactions, dgb.curl.response.data);
-
-    // Get product info of the products in transactions
-    int *ids = (int *)malloc(sizeof(int) * transactions->count);
-    for (size_t i = 0; i < transactions->count; i++) {
-        ids[i] = transactions->items[i].product_id;
-    }
-    dg_products products = {0};
-    dg__get_products_info(dg, ids, transactions->count, &products);
-
-    return true;
-}
-
 bool dg__get_products_info(degiro *dg, int *ids, size_t n_ids, dg_products *products) {
     nob_log(NOB_INFO, "Getting product info for %zu products...", n_ids);
 

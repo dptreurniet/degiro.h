@@ -7,22 +7,23 @@ find_package(cJSON CONFIG REQUIRED)
 set(SOURCES
     public/src/degiro.c
     public/src/user.c
+    public/src/transactions.c
     # public/src/utils.c
 
     private/src/dg_curl.c
     private/src/dg_utils.c
     private/src/dg_main.c
     private/src/dg_user.c
+    private/src/dg_transactions.c
     # private/src/degiro_account.c
     # private/src/degiro_portfolio.c
     # private/src/degiro_price.c
     # private/src/degiro_products.c
-    # private/src/degiro_transactions.c
 )
 
 set(HEADERS
     public/include/degiro.h
-    # public/include/utils.h
+    public/include/transactions.h
 )
 
 

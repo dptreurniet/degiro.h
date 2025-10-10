@@ -31,6 +31,7 @@ CURLcode dg__make_request(dg_context *ctx) {
     ctx->curl.response.size = 0;
     CURLcode res = curl_easy_perform(ctx->curl.curl);
     nob_log(NOB_INFO, "Received %ld bytes of data", ctx->curl.response.size);
+    // nob_log(NOB_WARNING, "%s", ctx->curl.response.data);
     return res;
 }
 
