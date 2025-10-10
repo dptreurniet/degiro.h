@@ -20,7 +20,7 @@ size_t dg__curl_callback(void *buffer, size_t size, size_t nmemb, void *userp) {
     response->size += new_size;
     response->data[response->size] = '\0';  // null-terminate
 
-    dump_to_file(response->data, "reponse.json");
+    dg__dump_to_file(response->data, "reponse.json");
 
     return new_size;
 };
@@ -68,7 +68,7 @@ void dg__set_default_curl_headers(dg_context *ctx) {
 
     // If there is a session id defined, add it to the headers
     if (ctx->user_config.session_id)
-        ctx->curl.headers = curl_slist_append(ctx->curl.headers, format_string("Cookie: JSESSIONID=%s;", ctx->user_config.session_id));
+        ctx->curl.headers = curl_slist_append(ctx->curl.headers, dg__format_string("Cookie: JSESSIONID=%s;", ctx->user_config.session_id));
 
     curl_easy_setopt(ctx->curl.curl, CURLOPT_HTTPHEADER, ctx->curl.headers);
 }

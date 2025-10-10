@@ -13,13 +13,13 @@ bool dg__parse_login_response(dg_context *ctx, dg_login_response *response) {
         return false;
     }
 
-    parse_bool(json, "captchaRequired", &response->captcha_required);
-    parse_bool(json, "isPassCodeEnabled", &response->is_pass_code_enabled);
-    parse_string(json, "locale", &response->locale);
-    parse_string(json, "redirectUrl", &response->redirect_url);
-    parse_string(json, "sessionId", &response->session_id);
-    parse_int(json, "status", &response->status);
-    parse_string(json, "statusText", &response->status_text);
+    dg__parse_bool(json, "captchaRequired", &response->captcha_required);
+    dg__parse_bool(json, "isPassCodeEnabled", &response->is_pass_code_enabled);
+    dg__parse_string(json, "locale", &response->locale);
+    dg__parse_string(json, "redirectUrl", &response->redirect_url);
+    dg__parse_string(json, "sessionId", &response->session_id);
+    dg__parse_int(json, "status", &response->status);
+    dg__parse_string(json, "statusText", &response->status_text);
 
     cJSON_Delete(json);
     return true;
@@ -36,7 +36,7 @@ bool dg__get_portfolio(degiro *dg) {
     }
 
     dg__set_default_curl_headers(&dgb.curl, dgb.user_config.session_id);
-    const char *url = format_string("%sv5/update/%d;jsessionid=%s?&portfolio=0",
+    const char *url = dg__format_string("%sv5/update/%d;jsessionid=%s?&portfolio=0",
                                     dgb.user_config.trading_url,
                                     dg->user_data.int_account,
                                     dgb.user_config.session_id);
@@ -87,7 +87,7 @@ bool dg__get_transactions(degiro *dg, dg_get_transactions_options options, dg_da
     }
 
     dg__set_default_curl_headers(&dgb.curl, dgb.user_config.session_id);
-    const char *url = format_string("%s%s?fromDate=%s&toDate=%s&groupTransactionsByOrder=%s&intAccount=%d&sessionId=%s",
+    const char *url = dg__format_string("%s%s?fromDate=%s&toDate=%s&groupTransactionsByOrder=%s&intAccount=%d&sessionId=%s",
                                     dgb.user_config.reporting_url,
                                     DEGIRO_GET_TRANSACTIONS_URL,
                                     options.from_date,
@@ -157,7 +157,7 @@ bool dg__get_products_info(degiro *dg, int *ids, size_t n_ids, dg_products *prod
     }
 
     dg__set_default_curl_headers(&dgb.curl, dgb.user_config.session_id);
-    const char *url = format_string("%sv5/products/info?intAccount=%d&sessionId=%s",
+    const char *url = dg__format_string("%sv5/products/info?intAccount=%d&sessionId=%s",
                                     dgb.user_config.product_search_url,
                                     dg->user_data.int_account,
                                     dgb.user_config.session_id);
@@ -165,7 +165,7 @@ bool dg__get_products_info(degiro *dg, int *ids, size_t n_ids, dg_products *prod
 
     cJSON *array = cJSON_CreateArray();
     for (size_t i = 0; i < unique_ids.count; i++) {
-        cJSON_AddItemToArray(array, cJSON_CreateString(format_string("%d", unique_ids.items[i])));
+        cJSON_AddItemToArray(array, cJSON_CreateString(dg__format_string("%d", unique_ids.items[i])));
     }
     const char *payload = cJSON_PrintUnformatted(array);
     dg__set_curl_payload(&dgb.curl, payload);

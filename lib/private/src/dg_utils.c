@@ -10,7 +10,7 @@
 #include "defines.h"
 #include "nob.h"
 
-void dump_to_file(const char *str, const char *filename) {
+void dg__dump_to_file(const char *str, const char *filename) {
     FILE *file = fopen(filename, "w");
     if (file == NULL) {
         perror("Error opening file");
@@ -20,7 +20,7 @@ void dump_to_file(const char *str, const char *filename) {
     fclose(file);
 }
 
-const char *format_string(const char *format, ...) {
+const char *dg__format_string(const char *format, ...) {
     va_list args;
 
     va_start(args, format);
@@ -49,7 +49,7 @@ const char *cJSON_GetTypeString(const cJSON *item) {
     return "Unknown";
 }
 
-bool parse_string(cJSON *root, const char *json_key, char **destination) {
+bool dg__parse_string(cJSON *root, const char *json_key, char **destination) {
     cJSON *obj = cJSON_GetObjectItem(root, json_key);
     if (!obj) {
         // nob_log(NOB_WARNING, "Tried to parse \"%s\", but it does not exist", json_key);
@@ -70,7 +70,7 @@ bool parse_string(cJSON *root, const char *json_key, char **destination) {
     return true;
 }
 
-bool parse_int(cJSON *root, const char *json_key, int *destination) {
+bool dg__parse_int(cJSON *root, const char *json_key, int *destination) {
     cJSON *obj = cJSON_GetObjectItem(root, json_key);
     if (!obj) {
         // nob_log(NOB_WARNING, "Tried to parse \"%s\", but it does not exist", json_key);
@@ -87,7 +87,7 @@ bool parse_int(cJSON *root, const char *json_key, int *destination) {
     return true;
 }
 
-bool parse_long_long_int(cJSON *root, const char *json_key, long long int *destination) {
+bool dg__parse_long_long_int(cJSON *root, const char *json_key, long long int *destination) {
     cJSON *obj = cJSON_GetObjectItem(root, json_key);
     if (!obj) {
         // nob_log(NOB_WARNING, "Tried to parse \"%s\", but it does not exist", json_key);
@@ -104,7 +104,7 @@ bool parse_long_long_int(cJSON *root, const char *json_key, long long int *desti
     return true;
 }
 
-bool parse_string_to_int(cJSON *root, const char *json_key, int *destination) {
+bool dg__parse_string_to_int(cJSON *root, const char *json_key, int *destination) {
     cJSON *obj = cJSON_GetObjectItem(root, json_key);
     if (!obj) {
         // nob_log(NOB_WARNING, "Tried to parse \"%s\", but it does not exist", json_key);
@@ -130,7 +130,7 @@ bool parse_string_to_int(cJSON *root, const char *json_key, int *destination) {
     return true;
 }
 
-bool parse_bool(cJSON *root, const char *json_key, bool *destination) {
+bool dg__parse_bool(cJSON *root, const char *json_key, bool *destination) {
     cJSON *obj = cJSON_GetObjectItem(root, json_key);
     if (!obj) {
         // nob_log(NOB_WARNING, "Tried to parse \"%s\", but it does not exist", json_key);
@@ -147,7 +147,7 @@ bool parse_bool(cJSON *root, const char *json_key, bool *destination) {
     return true;
 }
 
-bool parse_double(cJSON *root, const char *json_key, double *destination) {
+bool dg__parse_double(cJSON *root, const char *json_key, double *destination) {
     cJSON *obj = cJSON_GetObjectItem(root, json_key);
     if (!obj) {
         // nob_log(NOB_WARNING, "Tried to parse \"%s\", but it does not exist", json_key);
