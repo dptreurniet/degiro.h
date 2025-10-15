@@ -1,6 +1,5 @@
 #pragma once
 
-#include <stdbool.h>
 #include <stddef.h>
 
 #include "products.h"
@@ -10,5 +9,3 @@ typedef struct dg_da_products {
     size_t count;
     size_t capacity;
 } dg_da_products;
-
-bool dg__parse_products(dg_context *ctx, dg_da_products *products);

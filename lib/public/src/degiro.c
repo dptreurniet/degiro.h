@@ -8,6 +8,25 @@
 #define NOB_IMPLEMENTATION
 #include "nob.h"
 
+bool dg__parse_login_response(dg_context *ctx, dg_login_response *response) {
+    cJSON *json = cJSON_Parse(ctx->curl.response.data);
+    if (json == NULL) {
+        nob_log(NOB_ERROR, "Failed to parse JSON");
+        return false;
+    }
+
+    dg__parse_bool(json, "captchaRequired", &response->captcha_required);
+    dg__parse_bool(json, "isPassCodeEnabled", &response->is_pass_code_enabled);
+    dg__parse_string(json, "locale", &response->locale);
+    dg__parse_string(json, "redirectUrl", &response->redirect_url);
+    dg__parse_string(json, "sessionId", &response->session_id);
+    dg__parse_int(json, "status", &response->status);
+    dg__parse_string(json, "statusText", &response->status_text);
+
+    cJSON_Delete(json);
+    return true;
+}
+
 bool dg_init(dg_context *ctx) {
     nob_log(NOB_INFO, "Initializing DeGiro");
     curl_global_init(CURL_GLOBAL_DEFAULT);

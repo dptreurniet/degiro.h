@@ -12,13 +12,6 @@ set(SOURCES
 
     private/src/dg_curl.c
     private/src/dg_utils.c
-    private/src/dg_main.c
-    private/src/dg_user.c
-    private/src/dg_transactions.c
-    private/src/dg_products.c
-    # private/src/degiro_account.c
-    # private/src/degiro_portfolio.c
-    # private/src/degiro_price.c
 )
 
 set(HEADERS
