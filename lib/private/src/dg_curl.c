@@ -61,15 +61,43 @@ void dg__set_curl_POST(dg_context *ctx) {
     curl_easy_setopt(ctx->curl.curl, CURLOPT_POST, 1L);
 }
 
-void dg__set_default_curl_headers(dg_context *ctx) {
-    ctx->curl.headers = NULL;
-    ctx->curl.headers = curl_slist_append(ctx->curl.headers, "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) Gecko/20100101 Firefox/92.0");
-    ctx->curl.headers = curl_slist_append(ctx->curl.headers, "Content-Type: application/json");
-    ctx->curl.headers = curl_slist_append(ctx->curl.headers, "Accept-Encoding: identity");
+bool dg__set_default_curl_headers(dg_context *ctx) {
+    struct curl_slist *slist = NULL;
+    struct curl_slist *temp = NULL;
 
-    // If there is a session id defined, add it to the headers
-    if (ctx->user_config.session_id)
-        ctx->curl.headers = curl_slist_append(ctx->curl.headers, dg__format_string("Cookie: JSESSIONID=%s;", ctx->user_config.session_id));
+    // if (ctx->curl.headers) curl_slist_free_all(ctx->curl.headers);
+    temp = curl_slist_append(slist, "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) Gecko/20100101 Firefox/92.0");
+    if (!temp) {
+        nob_log(NOB_ERROR, "Failed to append header entry");
+        return false;
+    }
+    slist = temp;
 
-    curl_easy_setopt(ctx->curl.curl, CURLOPT_HTTPHEADER, ctx->curl.headers);
+    temp = curl_slist_append(slist, "Content-Type: application/json");
+    if (!temp) {
+        nob_log(NOB_ERROR, "Failed to append header entry");
+        return false;
+    }
+    slist = temp;
+
+    temp = curl_slist_append(slist, "Accept-Encoding: identity");
+    if (!temp) {
+        nob_log(NOB_ERROR, "Failed to append header entry");
+        return false;
+    }
+    slist = temp;
+
+    // If there is a session id defined, add it
+    if (ctx->user_config.session_id) {
+        const char *cookie_str = dg__format_string("Cookie: JSESSIONID=%s;", ctx->user_config.session_id);
+        temp = curl_slist_append(slist, cookie_str);
+        if (!temp) {
+            nob_log(NOB_ERROR, "Failed to append header entry");
+            return false;
+        }
+        slist = temp;
+    }
+
+    curl_easy_setopt(ctx->curl.curl, CURLOPT_HTTPHEADER, slist);
+    return true;
 }

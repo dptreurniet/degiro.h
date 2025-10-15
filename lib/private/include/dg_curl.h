@@ -13,4 +13,4 @@ bool dg__set_curl_url(dg_context *ctx, const char *url);
 void dg__set_curl_payload(dg_context *ctx, const char *payload);
 void dg__set_curl_GET(dg_context *ctx);
 void dg__set_curl_POST(dg_context *ctx);
-void dg__set_default_curl_headers(dg_context *ctx);
+bool dg__set_default_curl_headers(dg_context *ctx);

@@ -141,6 +141,104 @@ void render_user_info() {
     }
 }
 
+void render_products() {
+    static int selected_ix = -1;
+
+    {  // -------- Products --------
+        ImGui::BeginChild("Products", ImVec2(ImGui::GetContentRegionAvail().x * 0.5f, ImGui::GetContentRegionAvail().y), ImGuiChildFlags_None, ImGuiWindowFlags_None);
+        if (dg.products.count == 0) {
+            ImGui::Text("No products loaded yet...");
+        }
+
+        for (auto i = 0; i < dg.products.count; i++) {
+            if (ImGui::Selectable(dg.products.items[i].name, selected_ix == i))
+                selected_ix = i;
+        }
+        ImGui::EndChild();
+    }
+
+    ImGui::SameLine();
+
+    {  // -------- Properties --------
+        ImGui::BeginChild("Properties", ImVec2(0, ImGui::GetContentRegionAvail().y), ImGuiChildFlags_None, ImGuiWindowFlags_None);
+        ImGui::SeparatorText("Properties");
+
+        if (selected_ix == -1) {
+            ImGui::Text("Select a product");
+        } else {
+            dg_product product = dg.products.items[selected_ix];
+
+            ImGui::Text("ID:                  %d", product.id);
+            ImGui::Text("Name:                %s", product.name);
+            ImGui::Text("ISIN:                %s", product.isin);
+            ImGui::Text("Symbol:              %s", product.symbol);
+            ImGui::Text("Contract size:       %d", product.contract_size);
+            ImGui::Text("Product type:        %s", product.product_type);
+            ImGui::Text("Product type id:     %d", product.product_type_id);
+            ImGui::Text("Tradable:            %s", product.tradable ? "true" : "false");
+            ImGui::Text("Category:            %s", product.category);
+            ImGui::Text("Currency:            %s", product.currency);
+            ImGui::Text("Active:              %s", product.active ? "true" : "false");
+            ImGui::Text("Exchange id:         %s", product.exchange_id);
+            ImGui::Text("Only EOD prices:     %s", product.only_eod_prices ? "true" : "false");
+            ImGui::Text("Order time types:    %s", product.order_time_types);
+            ImGui::Text("Buy order types:     %s", product.buy_order_types);
+            ImGui::Text("Sell order types:    %s", product.sell_order_types);
+            ImGui::Text("Close price:         %.2f", product.close_price);
+            ImGui::Text("Close price date:    %s", product.close_price_date);
+            ImGui::Text("Is shortable:        %s", product.is_shortable ? "true" : "false");
+            ImGui::Text("Feed quality:        %s", product.feed_quality);
+            ImGui::Text("Order book depth:    %d", product.order_book_depth);
+            ImGui::Text("Vwd identifier type: %s", product.vwd_identifier_type);
+            ImGui::Text("Vwd id:              %s", product.vwd_id);
+            ImGui::Text("Quality switchable:  %s", product.quality_switchable ? "true" : "false");
+            ImGui::Text("Quality switch free: %s", product.quality_switch_free ? "true" : "false");
+            ImGui::Text("Vwd module id:       %d", product.vwd_module_id);
+
+            // ImGui::SeparatorText("Chart");
+
+            // static int period_radio = 0;
+            // ImGui::AlignTextToFramePadding();
+            // ImGui::Text("Period:");
+            // ImGui::SameLine();
+            // ImGui::RadioButton("1D", &period_radio, 0);
+            // ImGui::SameLine();
+            // ImGui::RadioButton("1W", &period_radio, 1);
+            // ImGui::SameLine();
+            // ImGui::RadioButton("1M", &period_radio, 2);
+            // ImGui::SameLine();
+            // ImGui::RadioButton("1Y", &period_radio, 3);
+
+            // dg_chart_period period = PERIOD_1D;
+            // if (period_radio == 0)
+            //     period = PERIOD_1D;
+            // if (period_radio == 1)
+            //     period = PERIOD_1W;
+            // if (period_radio == 2)
+            //     period = PERIOD_1M;
+            // if (period_radio == 3)
+            //     period = PERIOD_1Y;
+
+            // static dg_product_chart_options chart_opts = {0};
+            // static dg_product_chart chart = {0};
+
+            // dg_product_chart_options opts = {
+            //     .product = product,
+            //     .period = period};
+
+            // // Only get new data if options changed
+            // if (opts != chart_opts) {
+            //     dg_get_product_chart(&chart, opts);
+            // }
+            // chart_opts = opts;
+
+            // render_product_chart(chart);
+        }
+
+        ImGui::EndChild();
+    }
+}
+
 /*
 
 void render_portfolio() {
@@ -242,104 +340,6 @@ bool operator!=(const dg_product_chart_options &lhs, const dg_product_chart_opti
     return true;
 }
 
-void render_products() {
-    static int selected_ix = -1;
-
-    {  // -------- Products --------
-        ImGui::BeginChild("Products", ImVec2(ImGui::GetContentRegionAvail().x * 0.5f, ImGui::GetContentRegionAvail().y), ImGuiChildFlags_None, ImGuiWindowFlags_None);
-        if (dg.products.count == 0) {
-            ImGui::Text("No products loaded yet...");
-        }
-
-        for (auto i = 0; i < dg.products.count; i++) {
-            if (ImGui::Selectable(dg.products.items[i].name, selected_ix == i))
-                selected_ix = i;
-        }
-        ImGui::EndChild();
-    }
-
-    ImGui::SameLine();
-
-    {  // -------- Properties --------
-        ImGui::BeginChild("Properties", ImVec2(0, ImGui::GetContentRegionAvail().y), ImGuiChildFlags_None, ImGuiWindowFlags_None);
-        ImGui::SeparatorText("Properties");
-
-        if (selected_ix == -1) {
-            ImGui::Text("Select a product");
-        } else {
-            dg_product product = dg.products.items[selected_ix];
-
-            ImGui::Text("ID:                  %d", product.id);
-            ImGui::Text("Name:                %s", product.name);
-            ImGui::Text("ISIN:                %s", product.isin);
-            ImGui::Text("Symbol:              %s", product.symbol);
-            ImGui::Text("Contract size:       %d", product.contract_size);
-            ImGui::Text("Product type:        %s", product.product_type);
-            ImGui::Text("Product type id:     %d", product.product_type_id);
-            ImGui::Text("Tradable:            %s", product.tradable ? "true" : "false");
-            ImGui::Text("Category:            %s", product.category);
-            ImGui::Text("Currency:            %s", product.currency);
-            ImGui::Text("Active:              %s", product.active ? "true" : "false");
-            ImGui::Text("Exchange id:         %s", product.exchange_id);
-            ImGui::Text("Only EOD prices:     %s", product.only_eod_prices ? "true" : "false");
-            ImGui::Text("Order time types:    %s", product.order_time_types);
-            ImGui::Text("Buy order types:     %s", product.buy_order_types);
-            ImGui::Text("Sell order types:    %s", product.sell_order_types);
-            ImGui::Text("Close price:         %.2f", product.close_price);
-            ImGui::Text("Close price date:    %s", product.close_price_date);
-            ImGui::Text("Is shortable:        %s", product.is_shortable ? "true" : "false");
-            ImGui::Text("Feed quality:        %s", product.feed_quality);
-            ImGui::Text("Order book depth:    %d", product.order_book_depth);
-            ImGui::Text("Vwd identifier type: %s", product.vwd_identifier_type);
-            ImGui::Text("Vwd id:              %s", product.vwd_id);
-            ImGui::Text("Quality switchable:  %s", product.quality_switchable ? "true" : "false");
-            ImGui::Text("Quality switch free: %s", product.quality_switch_free ? "true" : "false");
-            ImGui::Text("Vwd module id:       %d", product.vwd_module_id);
-
-            ImGui::SeparatorText("Chart");
-
-            static int period_radio = 0;
-            ImGui::AlignTextToFramePadding();
-            ImGui::Text("Period:");
-            ImGui::SameLine();
-            ImGui::RadioButton("1D", &period_radio, 0);
-            ImGui::SameLine();
-            ImGui::RadioButton("1W", &period_radio, 1);
-            ImGui::SameLine();
-            ImGui::RadioButton("1M", &period_radio, 2);
-            ImGui::SameLine();
-            ImGui::RadioButton("1Y", &period_radio, 3);
-
-            dg_chart_period period = PERIOD_1D;
-            if (period_radio == 0)
-                period = PERIOD_1D;
-            if (period_radio == 1)
-                period = PERIOD_1W;
-            if (period_radio == 2)
-                period = PERIOD_1M;
-            if (period_radio == 3)
-                period = PERIOD_1Y;
-
-            static dg_product_chart_options chart_opts = {0};
-            static dg_product_chart chart = {0};
-
-            dg_product_chart_options opts = {
-                .product = product,
-                .period = period};
-
-            // Only get new data if options changed
-            if (opts != chart_opts) {
-                dg_get_product_chart(&chart, opts);
-            }
-            chart_opts = opts;
-
-            render_product_chart(chart);
-        }
-
-        ImGui::EndChild();
-    }
-}
-
 */
 void render_transactions() {
     {  // -------- Transactions list --------
@@ -354,6 +354,12 @@ void render_transactions() {
             if (!dg_get_transactions(&dg, opts, &transactions)) {
                 fprintf(stderr, "Failed to get transactions\n");
             }
+
+            int ids[transactions.count];
+            for (size_t i = 0; i < transactions.count; ++i) {
+                ids[i] = transactions.items[i].product_id;
+            }
+            dg_get_products(&dg, ids, transactions.count);
         }
 
         if (transactions.items == 0) {
@@ -493,7 +499,7 @@ void render_app() {
                 ImGui::EndTabItem();
             }
             if (ImGui::BeginTabItem("Products")) {
-                // render_products();
+                render_products();
                 ImGui::EndTabItem();
             }
             ImGui::EndTabBar();

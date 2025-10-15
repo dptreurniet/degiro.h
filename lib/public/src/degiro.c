@@ -20,7 +20,7 @@ bool dg_init(dg_context *ctx) {
 
     curl_easy_setopt(ctx->curl.curl, CURLOPT_WRITEFUNCTION, dg__curl_callback);
     curl_easy_setopt(ctx->curl.curl, CURLOPT_WRITEDATA, &ctx->curl.response);
-    dg__set_default_curl_headers(ctx);
+    if (!dg__set_default_curl_headers(ctx)) return false;
 
     return true;
 }
@@ -31,7 +31,7 @@ bool dg_login(dg_context *ctx, dg_login_data login) {
     ctx->logged_in = false;
 
     dg__set_curl_POST(ctx);
-    dg__set_default_curl_headers(ctx);
+    if (!dg__set_default_curl_headers(ctx)) return false;
     if (!dg__set_curl_url(ctx, dg__format_string("%s%s/totp", DEGIRO_BASE_URL, DEGIRO_LOGIN_URL))) return false;
     dg__set_curl_payload(ctx, dg__format_string("{\"username\":\"%s\",\"password\":\"%s\",\"oneTimePassword\":\"%s\"}",
                                                 login.username, login.password, login.totp));
@@ -57,7 +57,7 @@ bool dg_login(dg_context *ctx, dg_login_data login) {
 
     // Automatically get user_config after login, as this struct stores the session ID and contains URLs for subsequent API calls
     ctx->user_config.session_id = response.session_id;
-    dg__set_default_curl_headers(ctx);
+    if (!dg__set_default_curl_headers(ctx)) return false;
     if (!dg__set_curl_url(ctx, dg__format_string("%s%s", DEGIRO_BASE_URL, DEGIRO_GET_USER_CONFIG_URL))) return false;
     dg__set_curl_payload(ctx, "");
     dg__set_curl_GET(ctx);

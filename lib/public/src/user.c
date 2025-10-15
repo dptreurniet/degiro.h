@@ -12,7 +12,7 @@ bool dg_get_user_data(dg_context *ctx) {
         return false;
     }
 
-    dg__set_default_curl_headers(ctx);
+    if (!dg__set_default_curl_headers(ctx)) return false;
     dg__set_curl_payload(ctx, "");
     dg__set_curl_GET(ctx);
     dg__set_curl_url(ctx, dg__format_string("%sclient?sessionId=%s", ctx->user_config.pa_url, ctx->user_config.session_id));

@@ -17,7 +17,7 @@ bool dg_get_transactions(dg_context *ctx, dg_get_transactions_options options, d
     char from_date_buffer[11];
     strftime(from_date_buffer, sizeof(to_date_buffer), "%Y-%m-%d", &options.from_date);
 
-    dg__set_default_curl_headers(ctx);
+    if (!dg__set_default_curl_headers(ctx)) return false;
     dg__set_curl_url(ctx, dg__format_string("%s%s?fromDate=%s&toDate=%s&groupTransactionsByOrder=%s&intAccount=%d&sessionId=%s",
                                             ctx->user_config.reporting_url,
                                             DEGIRO_GET_TRANSACTIONS_URL,

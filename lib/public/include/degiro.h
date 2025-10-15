@@ -3,6 +3,7 @@
 #include <stdbool.h>
 
 #include "curl.h"
+#include "products.h"
 #include "user.h"
 
 typedef struct dg_user_config {
@@ -34,6 +35,7 @@ typedef struct dg_context {
     dg_curl curl;
     dg_user_config user_config;
     dg_user_data user_data;
+    dg_products products;
 } dg_context;
 
 typedef struct dg_login_data {
