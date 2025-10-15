@@ -124,6 +124,21 @@ bool dg_get_products(dg_context *ctx, int *ids, size_t n_ids) {
         return false;
     }
 
+    // If a product is loaded that was already in the context, remove the old one from the context
+    size_t i = 0;
+    while (i < ctx->products.count) {
+        bool product_removed = false;
+        for (size_t j = 0; j < products.count; ++j) {
+            if (products.items[j].id == ctx->products.items[i].id) {
+                nob_log(NOB_INFO, "Replacing product %s", products.items[j].name);
+                nob_da_remove_unordered(&ctx->products, i);
+                product_removed = true;
+                break;
+            }
+        }
+        if (!product_removed) ++i;
+    }
+
     size_t old_size = ctx->products.count;
     ctx->products.items = (dg_product *)realloc(ctx->products.items, sizeof(dg_product) * (ctx->products.count + products.count));
     for (size_t i = 0; i < products.count; ++i) {
