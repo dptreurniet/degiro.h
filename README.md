@@ -1,7 +1,7 @@
 # degiro.h
 <ins>**Unofficial**</ins> C library for interfacing with the popular broker [DeGiro](https://www.degiro.nl/).
 
-<img src="https://trader.degiro.nl/login/images/app-icons/degiro/degiro.b860f37ce8284f6b10ab.svg" width="150">
+<img src="degiro.svg" width="150">
 
 ### Important note
 <ins>**Usage of this library is always at your own risk.**</ins>
