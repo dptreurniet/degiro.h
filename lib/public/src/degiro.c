@@ -8,6 +8,45 @@
 #define NOB_IMPLEMENTATION
 #include "nob.h"
 
+bool dg__parse_user_config(dg_context *ctx) {
+    cJSON *json = cJSON_Parse(ctx->curl.response.data);
+    if (json == NULL) {
+        nob_log(NOB_ERROR, "Error parsing JSON");
+        return false;
+    }
+
+    cJSON *data = cJSON_GetObjectItem(json, "data");
+    if (!cJSON_IsObject(data)) {
+        nob_log(NOB_ERROR, "No \"data\" field in JSON");
+        return false;
+    }
+
+    dg__parse_string(data, "betaLandingPath", &ctx->user_config.beta_landing_path);
+    dg__parse_string(data, "cashSolutionsUrl", &ctx->user_config.cash_solutions_url);
+    dg__parse_int(data, "clientId", &ctx->user_config.client_id);
+    dg__parse_string(data, "companiesServiceUrl", &ctx->user_config.companies_service_url);
+    dg__parse_string(data, "dictionaryUrl", &ctx->user_config.dictionary_url);
+    dg__parse_string(data, "firstLoginWizardUrl", &ctx->user_config.first_login_wizard_url);
+    dg__parse_string(data, "i18nUrl", &ctx->user_config.i18n_url);
+    dg__parse_string(data, "landingPath", &ctx->user_config.landing_path);
+    dg__parse_string(data, "loginUrl", &ctx->user_config.login_url);
+    dg__parse_string(data, "mobileLandingPath", &ctx->user_config.mobile_landing_path);
+    dg__parse_string(data, "paUrl", &ctx->user_config.pa_url);
+    dg__parse_string(data, "paymentServiceUrl", &ctx->user_config.payment_service_url);
+    dg__parse_string(data, "productSearchUrl", &ctx->user_config.product_search_url);
+    dg__parse_string(data, "productTypesUrl", &ctx->user_config.product_types_url);
+    dg__parse_string(data, "reportingUrl", &ctx->user_config.reporting_url);
+    dg__parse_string(data, "sessionId", &ctx->user_config.session_id);
+    dg__parse_string(data, "taskManagerUrl", &ctx->user_config.task_manager_url);
+    dg__parse_string(data, "tradingUrl", &ctx->user_config.trading_url);
+    dg__parse_string(data, "vwdGossipsUrl", &ctx->user_config.vwd_gossips_url);
+    dg__parse_string(data, "vwdNewsUrl", &ctx->user_config.vwd_news_url);
+    dg__parse_string(data, "vwdQuotecastServiceUrl", &ctx->user_config.vwd_quotecast_service_url);
+
+    cJSON_Delete(json);
+    return true;
+}
+
 bool dg__parse_login_response(dg_context *ctx, dg_login_response *response) {
     cJSON *json = cJSON_Parse(ctx->curl.response.data);
     if (json == NULL) {
