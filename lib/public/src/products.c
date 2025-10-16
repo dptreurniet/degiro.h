@@ -1,5 +1,6 @@
 #include "products.h"
 
+#include <cjson/cJSON.h>
 #include <curl/curl.h>
 
 #include "degiro.h"

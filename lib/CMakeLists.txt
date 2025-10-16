@@ -9,6 +9,7 @@ set(SOURCES
     public/src/user.c
     public/src/transactions.c
     public/src/products.c
+    public/src/chart.c
 
     private/src/dg_curl.c
     private/src/dg_utils.c
@@ -18,6 +19,7 @@ set(HEADERS
     public/include/degiro.h
     public/include/transactions.h
     public/include/products.h
+    public/include/chart.h
 )
 
 

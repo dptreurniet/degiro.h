@@ -178,10 +178,10 @@ void render_products() {
                 }
 
                 ImGui::TableNextColumn();
-                ImGui::Text("%s", product.name);
+                ImGui::Text("%s  ", product.name);
 
                 ImGui::TableNextColumn();
-                ImGui::Text("%s", product.isin);
+                ImGui::Text("%s  ", product.isin);
 
                 ImGui::TableNextColumn();
                 ImGui::Text("%.2f", product.close_price);
@@ -231,6 +231,85 @@ void render_products() {
             ImGui::Text("Quality switchable:  %s", product.quality_switchable ? "true" : "false");
             ImGui::Text("Quality switch free: %s", product.quality_switch_free ? "true" : "false");
             ImGui::Text("Vwd module id:       %d", product.vwd_module_id);
+
+            // -------- Chart --------
+            {
+                ImGui::SeparatorText("Price");
+
+                static dg_product_chart chart = {0};
+
+                static dg_product_chart_options prev_options = {0};
+                static dg_product_chart_options options = {.period = PERIOD_1W};
+                options.product = product;
+
+                ImGui::Text("Chart period:");
+                ImGui::SameLine();
+                if (ImGui::RadioButton("1D", options.period == PERIOD_1D)) {
+                    options.period = PERIOD_1D;
+                }
+                ImGui::SameLine();
+                if (ImGui::RadioButton("1W", options.period == PERIOD_1W)) {
+                    options.period = PERIOD_1W;
+                }
+                ImGui::SameLine();
+                if (ImGui::RadioButton("1M", options.period == PERIOD_1M)) {
+                    options.period = PERIOD_1M;
+                }
+                ImGui::SameLine();
+                if (ImGui::RadioButton("6M", options.period == PERIOD_6M)) {
+                    options.period = PERIOD_6M;
+                }
+                ImGui::SameLine();
+                if (ImGui::RadioButton("1Y", options.period == PERIOD_1Y)) {
+                    options.period = PERIOD_1Y;
+                }
+
+                if (prev_options.period != options.period ||
+                    prev_options.product.id != options.product.id) {
+                    dg_get_product_chart(&dg, options, &chart);
+                }
+                prev_options = options;
+
+                char plot_title[64];
+                if (chart.currency) {
+                    snprintf(plot_title, sizeof(plot_title), "Price [%s]", chart.currency);
+                } else {
+                    snprintf(plot_title, sizeof(plot_title), "Price");
+                }
+
+                if (ImPlot::BeginPlot(plot_title, ImGui::GetContentRegionAvail(), ImPlotFlags_NoLegend)) {
+                    ImPlot::BustColorCache(plot_title);
+                    if (chart.chart_data.n_points > 0) {
+                        ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
+                        ImPlot::GetStyle().Use24HourClock = true;
+                        ImPlot::SetupAxes(nullptr, nullptr, ImPlotAxisFlags_NoHighlight, ImPlotAxisFlags_NoHighlight);
+
+                        float padding = (chart.high_price - chart.low_price) * 0.1;
+                        ImPlot::SetupAxesLimits(chart.chart_data.timestamps[0], chart.chart_data.timestamps[chart.chart_data.n_points - 1], chart.low_price - padding, chart.high_price + padding, ImPlotCond_Always);
+
+                        // Plot lines
+                        ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.25f);
+                        ImPlot::PlotShaded(chart.product.name, chart.chart_data.timestamps, chart.chart_data.prices, chart.chart_data.n_points, -INFINITY);
+                        ImPlot::PlotLine(chart.product.name, chart.chart_data.timestamps, chart.chart_data.prices, chart.chart_data.n_points);
+
+                        // Plot tags
+                        ImVec4 color;
+
+                        color = ImVec4(0, 1, 0, 1);
+                        ImPlot::TagY(chart.high_price, color);
+                        ImPlot::PushStyleColor(ImPlotCol_Line, color);
+                        ImPlot::PlotInfLines("", &chart.high_price, 1, ImPlotInfLinesFlags_Horizontal);
+                        ImPlot::PopStyleColor();
+
+                        color = ImVec4(1, 0, 0, 1);
+                        ImPlot::TagY(chart.low_price, color);
+                        ImPlot::PushStyleColor(ImPlotCol_Line, color);
+                        ImPlot::PlotInfLines("", &chart.low_price, 1, ImPlotInfLinesFlags_Horizontal);
+                        ImPlot::PopStyleColor();
+                    }
+                    ImPlot::EndPlot();
+                }
+            }
         }
 
         ImGui::EndChild();
