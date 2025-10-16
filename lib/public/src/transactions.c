@@ -5,7 +5,7 @@
 #include "defines.h"
 #include "degiro.h"
 #include "dg_curl.h"
-#include "dg_transactions.h"
+#include "dg_types.h"
 #include "dg_utils.h"
 #include "nob.h"
 

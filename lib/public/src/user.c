@@ -2,7 +2,7 @@
 
 #include "degiro.h"
 #include "dg_curl.h"
-#include "dg_main.h"
+#include "dg_types.h"
 #include "dg_utils.h"
 #include "nob.h"
 

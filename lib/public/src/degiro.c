@@ -2,7 +2,7 @@
 
 #include "defines.h"
 #include "dg_curl.h"
-#include "dg_main.h"
+#include "dg_types.h"
 #include "dg_utils.h"
 
 #define NOB_IMPLEMENTATION
