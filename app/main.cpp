@@ -145,15 +145,52 @@ void render_products() {
     static int selected_ix = -1;
 
     {  // -------- Products --------
-        ImGui::BeginChild("Products", ImVec2(ImGui::GetContentRegionAvail().x * 0.5f, ImGui::GetContentRegionAvail().y), ImGuiChildFlags_None, ImGuiWindowFlags_None);
+        ImGui::BeginChild("Products", ImVec2(ImGui::GetContentRegionAvail().x * 0.6f, ImGui::GetContentRegionAvail().y), ImGuiChildFlags_None, ImGuiWindowFlags_None);
         if (dg.products.count == 0) {
             ImGui::Text("No products loaded yet...");
         }
 
-        for (auto i = 0; i < dg.products.count; i++) {
-            if (ImGui::Selectable(dg.products.items[i].name, selected_ix == i))
-                selected_ix = i;
+        ImGuiTableFlags table_flags = 0;
+        table_flags |= ImGuiTableFlags_SizingFixedFit;
+        table_flags |= ImGuiTableFlags_NoHostExtendX;
+        table_flags |= ImGuiTableFlags_RowBg;
+        table_flags |= ImGuiTableFlags_BordersOuter;
+        table_flags |= ImGuiTableFlags_BordersV;
+        table_flags |= ImGuiTableFlags_NoBordersInBody;
+        table_flags |= ImGuiTableFlags_ScrollY;
+
+        if (ImGui::BeginTable("products", 5, table_flags)) {
+            ImGui::TableSetupColumn("Symbol");
+            ImGui::TableSetupColumn("Name");
+            ImGui::TableSetupColumn("ISIN");
+            ImGui::TableSetupColumn("Close price");
+            ImGui::TableSetupScrollFreeze(0, 1);  // Keep header always visible
+            ImGui::TableHeadersRow();
+
+            for (size_t i = 0; i < dg.products.count; ++i) {
+                dg_product product = dg.products.items[i];
+                ImGui::PushID(i);
+
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                if (ImGui::Selectable(product.symbol, i == selected_ix, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap)) {
+                    selected_ix = i;
+                }
+
+                ImGui::TableNextColumn();
+                ImGui::Text("%s", product.name);
+
+                ImGui::TableNextColumn();
+                ImGui::Text("%s", product.isin);
+
+                ImGui::TableNextColumn();
+                ImGui::Text("%.2f", product.close_price);
+
+                ImGui::PopID();
+            }
+            ImGui::EndTable();
         }
+
         ImGui::EndChild();
     }
 
@@ -194,45 +231,6 @@ void render_products() {
             ImGui::Text("Quality switchable:  %s", product.quality_switchable ? "true" : "false");
             ImGui::Text("Quality switch free: %s", product.quality_switch_free ? "true" : "false");
             ImGui::Text("Vwd module id:       %d", product.vwd_module_id);
-
-            // ImGui::SeparatorText("Chart");
-
-            // static int period_radio = 0;
-            // ImGui::AlignTextToFramePadding();
-            // ImGui::Text("Period:");
-            // ImGui::SameLine();
-            // ImGui::RadioButton("1D", &period_radio, 0);
-            // ImGui::SameLine();
-            // ImGui::RadioButton("1W", &period_radio, 1);
-            // ImGui::SameLine();
-            // ImGui::RadioButton("1M", &period_radio, 2);
-            // ImGui::SameLine();
-            // ImGui::RadioButton("1Y", &period_radio, 3);
-
-            // dg_chart_period period = PERIOD_1D;
-            // if (period_radio == 0)
-            //     period = PERIOD_1D;
-            // if (period_radio == 1)
-            //     period = PERIOD_1W;
-            // if (period_radio == 2)
-            //     period = PERIOD_1M;
-            // if (period_radio == 3)
-            //     period = PERIOD_1Y;
-
-            // static dg_product_chart_options chart_opts = {0};
-            // static dg_product_chart chart = {0};
-
-            // dg_product_chart_options opts = {
-            //     .product = product,
-            //     .period = period};
-
-            // // Only get new data if options changed
-            // if (opts != chart_opts) {
-            //     dg_get_product_chart(&chart, opts);
-            // }
-            // chart_opts = opts;
-
-            // render_product_chart(chart);
         }
 
         ImGui::EndChild();
@@ -342,8 +340,11 @@ bool operator!=(const dg_product_chart_options &lhs, const dg_product_chart_opti
 
 */
 void render_transactions() {
+    static dg_transactions transactions = {0};
+    static size_t selected_ix = -1;
+
     {  // -------- Transactions list --------
-        static dg_transactions transactions = {0};
+        ImGui::BeginChild("Transactions", ImVec2(ImGui::GetContentRegionAvail().x * 0.6f, ImGui::GetContentRegionAvail().y), ImGuiChildFlags_None, ImGuiWindowFlags_None);
 
         if (ImGui::Button("Get all")) {
             dg_get_transactions_options opts = {
@@ -379,27 +380,35 @@ void render_transactions() {
                 ImGui::TableSetupColumn("Action");
                 ImGui::TableSetupColumn("#");
                 ImGui::TableSetupColumn("Product");
-                ImGui::TableSetupColumn("Rate");
+                ImGui::TableSetupColumn("Price");
                 ImGui::TableSetupColumn("Total w/ fees");
                 ImGui::TableSetupScrollFreeze(0, 1);  // Keep header always visible
                 ImGui::TableHeadersRow();
 
                 for (size_t i = 0; i < transactions.count; ++i) {
                     dg_transaction t = transactions.items[i];
-                    // dg_product product = {0};
                     ImGui::PushID(i);
 
-                    // if (!dg_get_product_by_id(&dg, t.product_id, &product)) {
-                    //     fprintf(stderr, "Failed to find product with id %d in library\n", t.id);
-                    //     continue;
-                    // }
+                    dg_product product = {0};
+                    for (size_t j = 0; j < dg.products.count; ++j) {
+                        if (dg.products.items[j].id == t.product_id) {
+                            product = dg.products.items[j];
+                            break;
+                        }
+                    }
+                    if (product.id == 0) {
+                        fprintf(stderr, "Product with id %d not found", t.product_id);
+                        return;
+                    }
 
                     ImGui::TableNextRow();
                     ImGui::TableSetColumnIndex(0);
                     char *trimmed_date = (char *)malloc(sizeof(char) * 11);
                     strncpy(trimmed_date, t.date, 10);
                     trimmed_date[10] = '\0';
-                    ImGui::Text("%s  ", trimmed_date);
+                    if (ImGui::Selectable(trimmed_date, i == selected_ix, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap)) {
+                        selected_ix = i;
+                    }
                     free(trimmed_date);
 
                     ImGui::TableNextColumn();
@@ -417,7 +426,7 @@ void render_transactions() {
                     ImGui::Text("%d", abs(t.quantity));
 
                     ImGui::TableNextColumn();
-                    ImGui::Text("%d  ", t.id);
+                    ImGui::Text("%s  ", product.name);
 
                     ImGui::TableNextColumn();
                     ImGui::Text("%.2f  ", t.price);
@@ -430,6 +439,43 @@ void render_transactions() {
                 ImGui::EndTable();
             }
         }
+        ImGui::EndChild();
+    }
+
+    ImGui::SameLine();
+
+    {  // -------- Properties --------
+        ImGui::BeginChild("Properties", ImVec2(0, ImGui::GetContentRegionAvail().y), ImGuiChildFlags_None, ImGuiWindowFlags_None);
+        ImGui::SeparatorText("Properties");
+
+        if (selected_ix == -1) {
+            ImGui::Text("Select a transaction to view its properties");
+        } else {
+            dg_transaction t = transactions.items[selected_ix];
+            ImGui::Text("ID:                                   %d", t.id);                                      // int id;
+            ImGui::Text("Product ID:                           %d", t.product_id);                              // int product_id;
+            ImGui::Text("Date:                                 %s", t.date);                                    // char *date;
+            ImGui::Text("Buysell:                              %s", t.buysell);                                 // char *buysell;
+            ImGui::Text("Price:                                %.2f", t.price);                                 // double price;
+            ImGui::Text("Quantity:                             %d", t.quantity);                                // int quantity;
+            ImGui::Text("Total:                                %.2f", t.total);                                 // double total;
+            ImGui::Text("Order type ID:                        %d", t.order_type_id);                           // int order_type_id;
+            ImGui::Text("Counter party:                        %s", t.counter_party);                           // char *counter_party;
+            ImGui::Text("Transfered:                           %s", t.transfered ? "yes" : "no");               // bool transfered;
+            ImGui::Text("Fx rate:                              %d", t.fx_rate);                                 // int fx_rate;
+            ImGui::Text("Nett fx rate:                         %d", t.nett_fx_rate);                            // int nett_fx_rate;
+            ImGui::Text("Gross fx rate:                        %d", t.gross_fx_rate);                           // int gross_fx_rate;
+            ImGui::Text("Auto fx fee in base currency:         %d", t.auto_fx_fee_in_base_currency);            // int auto_fx_fee_in_base_currency;
+            ImGui::Text("Total in base currency:               %.2f", t.total_in_base_currency);                // double total_in_base_currency;
+            ImGui::Text("Fee in base currency:                 %.2f", t.fee_in_base_currency);                  // double fee_in_base_currency;
+            ImGui::Text("Total fees in base currency:          %.2f", t.total_fees_in_base_currency);           // double total_fees_in_base_currency;
+            ImGui::Text("Total plus fee in base currency:      %.2f", t.total_plus_fee_in_base_currency);       // double total_plus_fee_in_base_currency;
+            ImGui::Text("Total plus all fees in base currency: %.2f", t.total_plus_all_fees_in_base_currency);  // double total_plus_all_fees_in_base_currency;
+            ImGui::Text("Transaction type ID:                  %d", t.transaction_type_id);                     // int transaction_type_id;
+            ImGui::Text("Trading venue:                        %s", t.trading_venue);                           // char *trading_venue;
+            ImGui::Text("Executing entity ID:                  %s", t.executing_entity_id);                     // char *executing_entity_id;
+        }
+        ImGui::EndChild();
     }
 }
 
