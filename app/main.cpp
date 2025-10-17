@@ -10,6 +10,7 @@
 #include <math.h>
 
 #include <iostream>
+#include <sstream>
 
 #include "implot.h"
 extern "C" {
@@ -165,9 +166,18 @@ void render_products() {
         if (ImGui::BeginPopup("search_result_popup")) {
             if (search_results.count == 0) ImGui::Text("No results...");
 
+            static size_t selected_ix = -1;
             for (size_t i = 0; i < search_results.count; ++i) {
                 dg_product p = search_results.items[i];
-                ImGui::Text("%s | %s | %s | %s", p.symbol, p.name, p.isin, p.exchange_id);
+                dg_exchange *exchange = dg_lookup_exchange_by_id(&dg, atoi(p.exchange_id));
+                std::ostringstream line_str;
+                line_str << p.symbol << " | " << p.isin << " | " << exchange->hiq_abbr << " | " << p.name;
+                if (ImGui::Selectable(line_str.str().c_str(), i == selected_ix)) {
+                    selected_ix = i;
+                    if (!dg_get_product_info(&dg, p.id)) {
+                        fprintf(stderr, "Failed to load product with id %d", p.id);
+                    }
+                }
             }
             ImGui::EndPopup();
         }
@@ -185,10 +195,11 @@ void render_products() {
         table_flags |= ImGuiTableFlags_NoBordersInBody;
         table_flags |= ImGuiTableFlags_ScrollY;
 
-        if (ImGui::BeginTable("products", 5, table_flags)) {
+        if (ImGui::BeginTable("products", 6, table_flags)) {
             ImGui::TableSetupColumn("Symbol");
-            ImGui::TableSetupColumn("Name");
             ImGui::TableSetupColumn("ISIN");
+            ImGui::TableSetupColumn("Exchange");
+            ImGui::TableSetupColumn("Name");
             ImGui::TableSetupColumn("Close price");
             ImGui::TableSetupScrollFreeze(0, 1);  // Keep header always visible
             ImGui::TableHeadersRow();
@@ -204,10 +215,13 @@ void render_products() {
                 }
 
                 ImGui::TableNextColumn();
-                ImGui::Text("%s  ", product.name);
+                ImGui::Text("%s  ", product.isin);
 
                 ImGui::TableNextColumn();
-                ImGui::Text("%s  ", product.isin);
+                ImGui::Text("%s  ", dg_lookup_exchange_by_id(&dg, atoi(product.exchange_id))->hiq_abbr);
+
+                ImGui::TableNextColumn();
+                ImGui::Text("%s  ", product.name);
 
                 ImGui::TableNextColumn();
                 ImGui::Text("%.2f", product.close_price);
@@ -242,7 +256,7 @@ void render_products() {
             ImGui::Text("Category:            %s", product.category);
             ImGui::Text("Currency:            %s", product.currency);
             ImGui::Text("Active:              %s", product.active ? "true" : "false");
-            ImGui::Text("Exchange id:         %s", product.exchange_id);
+            ImGui::Text("Exchange:            %s", dg_lookup_exchange_by_id(&dg, atoi(product.exchange_id))->name);
             ImGui::Text("Only EOD prices:     %s", product.only_eod_prices ? "true" : "false");
             ImGui::Text("Order time types:    %s", product.order_time_types);
             ImGui::Text("Buy order types:     %s", product.buy_order_types);

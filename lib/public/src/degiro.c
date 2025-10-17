@@ -140,6 +140,12 @@ bool dg_login(dg_context *ctx, dg_login_data login) {
         return false;
     }
 
+    // Get dicionary that contains a lot of info needed for later calls
+    if (!dg_get_dictionary(ctx)) {
+        nob_log(NOB_ERROR, "Failed to get dictionary");
+        return false;
+    }
+
     return true;
 }
 

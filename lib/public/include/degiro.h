@@ -3,6 +3,7 @@
 #include <stdbool.h>
 
 #include "curl.h"
+#include "dictionary.h"
 #include "products.h"
 #include "user.h"
 
@@ -33,6 +34,7 @@ typedef struct dg_user_config {
 typedef struct dg_context {
     bool logged_in;
     dg_curl curl;
+    dg_dictionary dictionary;
     dg_user_config user_config;
     dg_user_data user_data;
     dg_products products;
@@ -50,4 +52,5 @@ void dg_cleanup(dg_context *ctx);
 
 // Include other headers to allow users to only include "degiro.h"
 #include "chart.h"
+#include "helpers.h"
 #include "transactions.h"

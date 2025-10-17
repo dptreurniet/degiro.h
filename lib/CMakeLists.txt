@@ -10,6 +10,8 @@ set(SOURCES
     public/src/transactions.c
     public/src/products.c
     public/src/chart.c
+    public/src/dictionary.c
+    public/src/helpers.c
 
     private/src/dg_curl.c
     private/src/dg_utils.c
@@ -20,6 +22,8 @@ set(HEADERS
     public/include/transactions.h
     public/include/products.h
     public/include/chart.h
+    public/include/dictionary.h
+    public/include/helpers.h
 )
 
 
