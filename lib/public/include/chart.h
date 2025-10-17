@@ -35,4 +35,4 @@ typedef struct dg_product_chart {
     double high_price;
 } dg_product_chart;
 
-bool dg_get_product_chart(dg_context *ctx, dg_product_chart_options opts, dg_product_chart *chart);
+bool dg_get_product_info_chart(dg_context *ctx, dg_product_chart_options opts, dg_product_chart *chart);

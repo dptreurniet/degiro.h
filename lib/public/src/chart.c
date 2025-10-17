@@ -166,7 +166,7 @@ bool dg__parse_chart_response(cJSON *data, dg_product_chart *chart) {
     return true;
 }
 
-bool dg_get_product_chart(dg_context *ctx, dg_product_chart_options opts, dg_product_chart *chart) {
+bool dg_get_product_info_chart(dg_context *ctx, dg_product_chart_options opts, dg_product_chart *chart) {
     // https://charting.vwdservices.com/hchart/v1/deGiro/data.js?requestid=1&resolution=P1D&culture=nl-NL&period=P50Y&series=issueid%3A485013849&series=price%3Aissueid%3A485013849&format=json&callback=vwd.hchart.seriesRequestManager.sync_response&userToken=4626342&tz=Europe%2FAmsterdam
 
     chart->product = opts.product;

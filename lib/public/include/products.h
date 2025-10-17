@@ -41,5 +41,12 @@ typedef struct dg_products {
     size_t count;
 } dg_products;
 
-bool dg_get_product(dg_context *ctx, int id);
-bool dg_get_products(dg_context *ctx, int *ids, size_t n_ids);
+typedef struct dg_search_products_options {
+    char *search_string;
+    int limit;
+    bool include_crypto;
+} dg_search_products_options;
+
+bool dg_get_product_info(dg_context *ctx, int id);
+bool dg_get_product_infos_info(dg_context *ctx, int *ids, size_t n_ids);
+bool dg_search_products(dg_context *ctx, dg_search_products_options options, dg_products *result);

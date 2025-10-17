@@ -9,21 +9,14 @@
 #include "dg_utils.h"
 #include "nob.h"
 
-bool dg__parse_products(dg_context *ctx, dg_da_products *products) {
-    cJSON *json = cJSON_Parse(ctx->curl.response.data);
-    if (json == NULL) {
-        nob_log(NOB_ERROR, "Error parsing JSON");
-        return false;
-    }
-
-    cJSON *data = cJSON_GetObjectItem(json, "data");
-    if (!cJSON_IsObject(data)) {
-        nob_log(NOB_ERROR, "Failed to load \"data\" in JSON");
+bool dg__parse_products(cJSON *root, dg_da_products *products) {
+    if (!(cJSON_IsObject(root) || cJSON_IsArray(root))) {
+        nob_log(NOB_ERROR, "Root object is not an object");
         return false;
     }
 
     products->count = 0;
-    cJSON *product = data->child;
+    cJSON *product = root->child;
     while (product != NULL) {
         dg_product p = {0};
 
@@ -62,11 +55,11 @@ bool dg__parse_products(dg_context *ctx, dg_da_products *products) {
     return true;
 }
 
-bool dg_get_product(dg_context *ctx, int id) {
-    return dg_get_products(ctx, &id, 1);
+bool dg_get_product_info(dg_context *ctx, int id) {
+    return dg_get_product_infos_info(ctx, &id, 1);
 }
 
-bool dg_get_products(dg_context *ctx, int *ids, size_t n_ids) {
+bool dg_get_product_infos_info(dg_context *ctx, int *ids, size_t n_ids) {
     nob_log(NOB_INFO, "Getting product info for %zu products...", n_ids);
 
     // Make list of unique ids (required to make request valid)
@@ -119,8 +112,20 @@ bool dg_get_products(dg_context *ctx, int *ids, size_t n_ids) {
         return false;
     }
 
+    cJSON *json = cJSON_Parse(ctx->curl.response.data);
+    if (json == NULL) {
+        nob_log(NOB_ERROR, "Error parsing JSON");
+        return false;
+    }
+
+    cJSON *data = cJSON_GetObjectItem(json, "data");
+    if (!cJSON_IsObject(data)) {
+        nob_log(NOB_ERROR, "Failed to load \"data\" in JSON");
+        return false;
+    }
+
     dg_da_products products = {0};
-    if (!dg__parse_products(ctx, &products)) {
+    if (!dg__parse_products(data, &products)) {
         nob_log(NOB_ERROR, "Failed to parse products from response");
         return false;
     }
@@ -146,6 +151,52 @@ bool dg_get_products(dg_context *ctx, int *ids, size_t n_ids) {
         ctx->products.items[old_size + i] = products.items[i];
     }
     ctx->products.count = old_size + products.count;
+
+    return true;
+}
+
+bool dg_search_products(dg_context *ctx, dg_search_products_options options, dg_products *result) {
+    nob_log(NOB_INFO, "Searching products...");
+
+    if (!dg__set_default_curl_headers(ctx)) return false;
+    dg__set_curl_url(ctx, dg__format_string("%sv5/products/lookup?intAccount=%d&sessionId=%s&crypto=%s&limit=%d&searchText=%s",
+                                            ctx->user_config.product_search_url,
+                                            ctx->user_data.int_account,
+                                            ctx->user_config.session_id,
+                                            options.include_crypto ? "1" : "0",
+                                            options.limit,
+                                            options.search_string));
+    dg__set_curl_GET(ctx);
+
+    CURLcode res = dg__make_request(ctx);
+    if (res != CURLE_OK) {
+        nob_log(NOB_ERROR, "Curl request failed: %s", curl_easy_strerror(res));
+        return false;
+    }
+
+    cJSON *json = cJSON_Parse(ctx->curl.response.data);
+    if (json == NULL) {
+        nob_log(NOB_ERROR, "Error parsing JSON");
+        return false;
+    }
+
+    cJSON *products_json = cJSON_GetObjectItem(json, "products");
+    if (!cJSON_IsArray(products_json)) {
+        nob_log(NOB_ERROR, "Failed to load \"products\" in JSON");
+        return false;
+    }
+
+    dg_da_products products = {0};
+    dg__parse_products(products_json, &products);
+
+    if (result->items != NULL) free(result->items);
+    result->items = (dg_product *)malloc(sizeof(dg_product) * products.count);
+    if (result->items == NULL) {
+        nob_log(NOB_ERROR, "Failed to allocate memory for search results");
+        return false;
+    }
+    memcpy(result->items, products.items, products.count * sizeof(dg_product));
+    result->count = products.count;
 
     return true;
 }

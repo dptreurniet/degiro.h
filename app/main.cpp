@@ -146,6 +146,32 @@ void render_products() {
 
     {  // -------- Products --------
         ImGui::BeginChild("Products", ImVec2(ImGui::GetContentRegionAvail().x * 0.6f, ImGui::GetContentRegionAvail().y), ImGuiChildFlags_None, ImGuiWindowFlags_None);
+
+        static dg_products search_results = {0};
+        static char search_input[128];
+        dg_search_products_options search_options = {
+            .limit = 10,
+            .include_crypto = true,
+        };
+
+        if (ImGui::InputText("Search", search_input, sizeof(search_input), ImGuiInputTextFlags_EnterReturnsTrue)) {
+            if (strcmp(search_input, "") != 0) {
+                search_options.search_string = search_input;
+                dg_search_products(&dg, search_options, &search_results);
+                ImGui::OpenPopup("search_result_popup");
+            }
+        }
+
+        if (ImGui::BeginPopup("search_result_popup")) {
+            if (search_results.count == 0) ImGui::Text("No results...");
+
+            for (size_t i = 0; i < search_results.count; ++i) {
+                dg_product p = search_results.items[i];
+                ImGui::Text("%s | %s | %s | %s", p.symbol, p.name, p.isin, p.exchange_id);
+            }
+            ImGui::EndPopup();
+        }
+
         if (dg.products.count == 0) {
             ImGui::Text("No products loaded yet...");
         }
@@ -266,7 +292,7 @@ void render_products() {
 
                 if (prev_options.period != options.period ||
                     prev_options.product.id != options.product.id) {
-                    dg_get_product_chart(&dg, options, &chart);
+                    dg_get_product_info_chart(&dg, options, &chart);
                 }
                 prev_options = options;
 
@@ -334,7 +360,7 @@ void render_portfolio() {
 
             const dg_product *product = NULL;
             if (strcmp(position.position_type, "PRODUCT") == 0) {
-                // product = dg_get_product_by_id(&dg, atoi(position.id));
+                // product = dg_get_product_info_by_id(&dg, atoi(position.id));
             }
 
             if (show_non_zero_only && position.size <= 0)
@@ -439,7 +465,7 @@ void render_transactions() {
             for (size_t i = 0; i < transactions.count; ++i) {
                 ids[i] = transactions.items[i].product_id;
             }
-            dg_get_products(&dg, ids, transactions.count);
+            dg_get_product_infos_info(&dg, ids, transactions.count);
         }
 
         if (transactions.items == 0) {
