@@ -155,7 +155,7 @@ void render_products() {
             .include_crypto = true,
         };
 
-        if (ImGui::InputText("Search", search_input, sizeof(search_input), ImGuiInputTextFlags_EnterReturnsTrue)) {
+        if (ImGui::InputText("Product search", search_input, sizeof(search_input), ImGuiInputTextFlags_EnterReturnsTrue)) {
             if (strcmp(search_input, "") != 0) {
                 search_options.search_string = search_input;
                 dg_search_products(&dg, search_options, &search_results);
@@ -163,6 +163,8 @@ void render_products() {
             }
         }
 
+        ImVec2 rect_min = ImGui::GetItemRectMin();
+        ImGui::SetNextWindowPos({rect_min.x, rect_min.y + ImGui::GetItemRectSize().y}, ImGuiCond_Appearing);
         if (ImGui::BeginPopup("search_result_popup")) {
             if (search_results.count == 0) ImGui::Text("No results...");
 
@@ -171,7 +173,7 @@ void render_products() {
                 dg_product p = search_results.items[i];
                 dg_exchange *exchange = dg_lookup_exchange_by_id(&dg, atoi(p.exchange_id));
                 std::ostringstream line_str;
-                line_str << p.symbol << " | " << p.isin << " | " << exchange->hiq_abbr << " | " << p.name;
+                line_str << ((p.symbol == NULL) ? "????" : p.symbol) << " | " << p.isin << " | " << exchange->hiq_abbr << " | " << p.name;
                 if (ImGui::Selectable(line_str.str().c_str(), i == selected_ix)) {
                     selected_ix = i;
                     if (!dg_get_product_info(&dg, p.id)) {
@@ -180,10 +182,6 @@ void render_products() {
                 }
             }
             ImGui::EndPopup();
-        }
-
-        if (dg.products.count == 0) {
-            ImGui::Text("No products loaded yet...");
         }
 
         ImGuiTableFlags table_flags = 0;
