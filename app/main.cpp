@@ -254,7 +254,7 @@ void render_products() {
             ImGui::Text("Category:            %s", product.category);
             ImGui::Text("Currency:            %s", product.currency);
             ImGui::Text("Active:              %s", product.active ? "true" : "false");
-            ImGui::Text("Exchange:            %s", dg_lookup_exchange_by_id(&dg, atoi(product.exchange_id))->name);
+            ImGui::Text("Exchange:            * %s", dg_lookup_exchange_by_id(&dg, atoi(product.exchange_id))->name);
             ImGui::Text("Only EOD prices:     %s", product.only_eod_prices ? "true" : "false");
             ImGui::Text("Order time types:    %s", product.order_time_types);
             ImGui::Text("Buy order types:     %s", product.buy_order_types);
@@ -269,6 +269,7 @@ void render_products() {
             ImGui::Text("Quality switchable:  %s", product.quality_switchable ? "true" : "false");
             ImGui::Text("Quality switch free: %s", product.quality_switch_free ? "true" : "false");
             ImGui::Text("Vwd module id:       %d", product.vwd_module_id);
+            ImGui::Text("                     * dictionary lookup");
 
             // -------- Chart --------
             {
