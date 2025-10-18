@@ -56,10 +56,6 @@ bool dg__parse_string(cJSON *root, const char *json_key, char **destination) {
         return false;
     }
 
-    if (*destination != NULL) {
-        free(*destination);
-    }
-
     if (cJSON_IsString(obj) && (obj->valuestring != NULL)) {
         *destination = strdup(obj->valuestring);
     } else {

@@ -2,10 +2,42 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
+
+#include "types.h"
 
 // Forward-declare context
 struct dg_context;
 typedef struct dg_context dg_context;
+
+typedef enum {
+    DG_PRODUCT_TYPE_STOCK,
+    DG_PRODUCT_TYPE_INDEX,
+    DG_PRODUCT_TYPE_BOND,
+    DG_PRODUCT_TYPE_FUTURE,
+    DG_PRODUCT_TYPE_OPTION,
+    DG_PRODUCT_TYPE_FUND,
+    DG_PRODUCT_TYPE_LEVERAGE_PRODUCT,
+    DG_PRODUCT_TYPE_ETF,
+    DG_PRODUCT_TYPE_CFD,
+    DG_PRODUCT_TYPE_WARRANT,
+    DG_PRODUCT_TYPE_CURRENCY,
+} dg_product_type;
+
+const char *dg_product_type_str(dg_product_type type);
+
+typedef enum {
+    DG_ORDER_TYPE_LIMITED,
+    DG_ORDER_TYPE_STOP_LIMITED,
+    DG_ORDER_TYPE_MARKET_ORDER,
+    DG_ORDER_TYPE_STOP_LOSS,
+    DG_ORDER_TYPE_AMOUNT,
+    DG_ORDER_TYPE_SIZE
+} dg_order_type;
+
+typedef uint8_t dg_order_type_flags;
+
+const char *dg_get_order_type_str(dg_order_type_flags flags);
 
 typedef struct dg_product {
     int id;
@@ -13,17 +45,16 @@ typedef struct dg_product {
     char *isin;
     char *symbol;
     int contract_size;
-    char *product_type;
-    int product_type_id;
+    dg_product_type product_type;
     bool tradable;
     char *category;
-    char *currency;
+    dg_currency currency;
     bool active;
-    char *exchange_id;
+    int exchange_id;
     bool only_eod_prices;
     char **order_time_types;
-    char **buy_order_types;
-    char **sell_order_types;
+    dg_order_type_flags buy_order_types;
+    dg_order_type_flags sell_order_types;
     double close_price;
     char *close_price_date;
     bool is_shortable;

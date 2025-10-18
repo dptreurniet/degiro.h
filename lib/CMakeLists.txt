@@ -12,9 +12,12 @@ set(SOURCES
     public/src/chart.c
     public/src/dictionary.c
     public/src/helpers.c
+    public/src/portfolio.c
+    public/src/types.c
 
     private/src/dg_curl.c
     private/src/dg_utils.c
+    private/src/dg_types.c
 )
 
 set(HEADERS
@@ -24,6 +27,8 @@ set(HEADERS
     public/include/chart.h
     public/include/dictionary.h
     public/include/helpers.h
+    public/include/portfolio.h
+    public/include/types.h
 )
 
 

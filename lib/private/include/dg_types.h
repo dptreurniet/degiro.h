@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include "portfolio.h"
 #include "products.h"
 #include "transactions.h"
 
@@ -33,3 +34,11 @@ typedef struct dg_da_transactions {
     size_t count;
     size_t capacity;
 } dg_da_transactions;
+
+typedef struct dg_da_positions {
+    dg_position *items;
+    size_t count;
+    size_t capacity;
+} dg_da_positions;
+
+dg_currency dg__currency_from_string(const char *str);

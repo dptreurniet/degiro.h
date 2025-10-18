@@ -9,6 +9,76 @@
 #include "dg_utils.h"
 #include "nob.h"
 
+const char *dg_get_order_type_str(dg_order_type_flags flags) {
+    Nob_String_Builder sb = {0};
+    if ((flags & (1 << DG_ORDER_TYPE_LIMITED)) != 0) nob_sb_appendf(&sb, "Limit, ");
+    if ((flags & (1 << DG_ORDER_TYPE_STOP_LIMITED)) != 0) nob_sb_appendf(&sb, "Stoplimit, ");
+    if ((flags & (1 << DG_ORDER_TYPE_MARKET_ORDER)) != 0) nob_sb_appendf(&sb, "Market, ");
+    if ((flags & (1 << DG_ORDER_TYPE_STOP_LOSS)) != 0) nob_sb_appendf(&sb, "Stoploss, ");
+    if ((flags & (1 << DG_ORDER_TYPE_AMOUNT)) != 0) nob_sb_appendf(&sb, "Amount, ");
+    if ((flags & (1 << DG_ORDER_TYPE_SIZE)) != 0) nob_sb_appendf(&sb, "Size, ");
+    if (sb.count > 0) sb.count -= 2;  // remove trailing comma
+
+    nob_sb_append_null(&sb);
+    return sb.items;
+}
+
+bool dg__parse_order_type_flags(cJSON *root, const char *key, dg_order_type_flags *flag) {
+    *flag = 0;
+
+    cJSON *types = cJSON_GetObjectItem(root, key);
+    if (types == NULL || !cJSON_IsArray(types)) {
+        nob_log(NOB_ERROR, "No valid types found");
+        return false;
+    }
+
+    int array_size = cJSON_GetArraySize(types);
+    for (int i = 0; i < array_size; ++i) {
+        cJSON *type = cJSON_GetArrayItem(types, i);
+        if (type != NULL) {
+            const char *type_str = cJSON_GetStringValue(type);
+            if (strcmp(type_str, "LIMIT") == 0) *flag |= (1 << DG_ORDER_TYPE_LIMITED);
+            if (strcmp(type_str, "MARKET") == 0) *flag |= (1 << DG_ORDER_TYPE_MARKET_ORDER);
+            if (strcmp(type_str, "STOPLOSS") == 0) *flag |= (1 << DG_ORDER_TYPE_STOP_LOSS);
+            if (strcmp(type_str, "STOPLIMIT") == 0) *flag |= (1 << DG_ORDER_TYPE_STOP_LIMITED);
+            if (strcmp(type_str, "STANDARDAMOUNT") == 0) *flag |= (1 << DG_ORDER_TYPE_AMOUNT);
+            if (strcmp(type_str, "STANDARDSIZE") == 0) *flag |= (1 << DG_ORDER_TYPE_SIZE);
+        }
+    }
+
+    return true;
+}
+
+dg_product_type dg__product_type_from_int(int type_id) {
+    switch (type_id) {
+        case 1:
+            return DG_PRODUCT_TYPE_STOCK;
+        case 180:
+            return DG_PRODUCT_TYPE_INDEX;
+        case 2:
+            return DG_PRODUCT_TYPE_BOND;
+        case 7:
+            return DG_PRODUCT_TYPE_FUTURE;
+        case 8:
+            return DG_PRODUCT_TYPE_OPTION;
+        case 13:
+            return DG_PRODUCT_TYPE_FUND;
+        case 14:
+            return DG_PRODUCT_TYPE_LEVERAGE_PRODUCT;
+        case 131:
+            return DG_PRODUCT_TYPE_ETF;
+        case 535:
+            return DG_PRODUCT_TYPE_CFD;
+        case 536:
+            return DG_PRODUCT_TYPE_WARRANT;
+        case 311:
+            return DG_PRODUCT_TYPE_CURRENCY;
+        default:
+            nob_log(NOB_ERROR, "Unknown type id encountered: %d", type_id);
+            NOB_UNREACHABLE("Unknown type id encountered");
+    }
+}
+
 bool dg__parse_products(cJSON *root, dg_da_products *products) {
     if (!(cJSON_IsObject(root) || cJSON_IsArray(root))) {
         nob_log(NOB_ERROR, "Root object is not an object");
@@ -25,18 +95,15 @@ bool dg__parse_products(cJSON *root, dg_da_products *products) {
         dg__parse_string(product, "isin", &p.isin);
         dg__parse_string(product, "symbol", &p.symbol);
         dg__parse_int(product, "contractSize", &p.contract_size);
-        dg__parse_string(product, "productType", &p.product_type);
-        dg__parse_int(product, "productTypeId", &p.product_type_id);
         dg__parse_bool(product, "tradable", &p.tradable);
         dg__parse_string(product, "category", &p.category);
-        dg__parse_string(product, "currency", &p.currency);
         dg__parse_bool(product, "active", &p.active);
-        dg__parse_string(product, "exchangeId", &p.exchange_id);
+        dg__parse_string_to_int(product, "exchangeId", &p.exchange_id);
         dg__parse_bool(product, "onlyEodPrices", &p.only_eod_prices);
         // TODO: parse list items
         // dg__parse_string(product, "*order_time_types",   &p.order_time_types);
-        // dg__parse_string(product, "*buy_order_types",    &p.buy_order_types);
-        // dg__parse_string(product, "*sell_order_types",   &p.sell_order_types);
+        dg__parse_order_type_flags(product, "buyOrderTypes", &p.buy_order_types);
+        dg__parse_order_type_flags(product, "sellOrderTypes", &p.sell_order_types);
         dg__parse_double(product, "closePrice", &p.close_price);
         dg__parse_string(product, "closePriceDate", &p.close_price_date);
         dg__parse_bool(product, "isShortable", &p.is_shortable);
@@ -47,6 +114,15 @@ bool dg__parse_products(cJSON *root, dg_da_products *products) {
         dg__parse_bool(product, "qualitySwitchable", &p.quality_switchable);
         dg__parse_bool(product, "qualitySwitchFree", &p.quality_switch_free);
         dg__parse_int(product, "vwdModuleId", &p.vwd_module_id);
+
+        int type_id;
+        dg__parse_int(product, "productTypeId", &type_id);
+        p.product_type = dg__product_type_from_int(type_id);
+
+        char *currency_str;
+        dg__parse_string(product, "currency", &currency_str);
+        p.currency = dg__currency_from_string(currency_str);
+        free(currency_str);
 
         nob_da_append(products, p);
         product = product->next;
@@ -199,4 +275,34 @@ bool dg_search_products(dg_context *ctx, dg_search_products_options options, dg_
     result->count = products.count;
 
     return true;
+}
+
+const char *dg_product_type_str(dg_product_type type_id) {
+    switch (type_id) {
+        case DG_PRODUCT_TYPE_STOCK:
+            return "STOCK";
+        case DG_PRODUCT_TYPE_INDEX:
+            return "INDEX";
+        case DG_PRODUCT_TYPE_BOND:
+            return "BOND";
+        case DG_PRODUCT_TYPE_FUTURE:
+            return "FUTURE";
+        case DG_PRODUCT_TYPE_OPTION:
+            return "OPTION";
+        case DG_PRODUCT_TYPE_FUND:
+            return "FUND";
+        case DG_PRODUCT_TYPE_LEVERAGE_PRODUCT:
+            return "PRODUCT";
+        case DG_PRODUCT_TYPE_ETF:
+            return "ETF";
+        case DG_PRODUCT_TYPE_CFD:
+            return "CFD";
+        case DG_PRODUCT_TYPE_WARRANT:
+            return "WARRANT";
+        case DG_PRODUCT_TYPE_CURRENCY:
+            return "CURRENCY";
+        default:
+            NOB_UNREACHABLE("Missing type case");
+    }
+    return "";
 }

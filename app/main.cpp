@@ -171,7 +171,7 @@ void render_products() {
             static size_t selected_ix = -1;
             for (size_t i = 0; i < search_results.count; ++i) {
                 dg_product p = search_results.items[i];
-                dg_exchange *exchange = dg_lookup_exchange_by_id(&dg, atoi(p.exchange_id));
+                dg_exchange *exchange = dg_lookup_exchange_by_id(&dg, p.exchange_id);
                 std::ostringstream line_str;
                 line_str << ((p.symbol == NULL) ? "????" : p.symbol) << " | " << p.isin << " | " << exchange->hiq_abbr << " | " << p.name;
                 if (ImGui::Selectable(line_str.str().c_str(), i == selected_ix)) {
@@ -216,13 +216,13 @@ void render_products() {
                 ImGui::Text("%s  ", product.isin);
 
                 ImGui::TableNextColumn();
-                ImGui::Text("%s  ", dg_lookup_exchange_by_id(&dg, atoi(product.exchange_id))->hiq_abbr);
+                ImGui::Text("%s  ", dg_lookup_exchange_by_id(&dg, product.exchange_id)->hiq_abbr);
 
                 ImGui::TableNextColumn();
                 ImGui::Text("%s  ", product.name);
 
                 ImGui::TableNextColumn();
-                ImGui::Text("%.2f", product.close_price);
+                ImGui::Text("%s %.2f", dg_currency_symbol(product.currency), product.close_price);
 
                 ImGui::PopID();
             }
@@ -248,18 +248,17 @@ void render_products() {
             ImGui::Text("ISIN:                %s", product.isin);
             ImGui::Text("Symbol:              %s", product.symbol);
             ImGui::Text("Contract size:       %d", product.contract_size);
-            ImGui::Text("Product type:        %s", product.product_type);
-            ImGui::Text("Product type id:     %d", product.product_type_id);
+            ImGui::Text("Product type:        %s", dg_product_type_str(product.product_type));
             ImGui::Text("Tradable:            %s", product.tradable ? "true" : "false");
             ImGui::Text("Category:            %s", product.category);
-            ImGui::Text("Currency:            %s", product.currency);
+            ImGui::Text("Currency:            %s (%s)", dg_currency_str(product.currency), dg_currency_symbol(product.currency));
             ImGui::Text("Active:              %s", product.active ? "true" : "false");
-            ImGui::Text("Exchange:            * %s", dg_lookup_exchange_by_id(&dg, atoi(product.exchange_id))->name);
+            ImGui::Text("Exchange:            * %s", dg_lookup_exchange_by_id(&dg, product.exchange_id)->name);
             ImGui::Text("Only EOD prices:     %s", product.only_eod_prices ? "true" : "false");
             ImGui::Text("Order time types:    %s", product.order_time_types);
-            ImGui::Text("Buy order types:     %s", product.buy_order_types);
-            ImGui::Text("Sell order types:    %s", product.sell_order_types);
-            ImGui::Text("Close price:         %.2f", product.close_price);
+            ImGui::Text("Buy order types:     %s", dg_get_order_type_str(product.buy_order_types));
+            ImGui::Text("Sell order types:    %s", dg_get_order_type_str(product.sell_order_types));
+            ImGui::Text("Close price:         %s %.2f", dg_currency_symbol(product.currency), product.close_price);
             ImGui::Text("Close price date:    %s", product.close_price_date);
             ImGui::Text("Is shortable:        %s", product.is_shortable ? "true" : "false");
             ImGui::Text("Feed quality:        %s", product.feed_quality);
@@ -359,53 +358,132 @@ void render_products() {
     }
 }
 
-/*
-
 void render_portfolio() {
-    static bool show_non_zero_only = true;
-    ImGui::Checkbox("Non-zero only", &show_non_zero_only);
-    ImGui::SameLine();
+    {
+        ImGui::BeginChild("Portfolio", ImVec2(ImGui::GetContentRegionAvail().x * 0.6f, ImGui::GetContentRegionAvail().y), ImGuiChildFlags_None, ImGuiWindowFlags_None);
 
-    static bool show_cash = true;
-    ImGui::Checkbox("Cash", &show_cash);
-
-    if (dg.portfolio.count == 0) {
-        ImGui::Text("Portfolio has not been loaded yet...");
-    } else {
-        for (auto i = 0; i < dg.portfolio.count; i++) {
-            dg_position position = dg.portfolio.items[i];
-
-            const dg_product *product = NULL;
-            if (strcmp(position.position_type, "PRODUCT") == 0) {
-                // product = dg_get_product_info_by_id(&dg, atoi(position.id));
+        if (dg.portfolio.count == 0) {
+            ImGui::Text("Portfolio is not yet loaded or empty");
+            if (ImGui::Button("Get portfolio")) {
+                if (!dg_get_portfolio(&dg)) {
+                    fprintf(stderr, "Failed to get portfolio\n");
+                }
             }
+        } else {
+            static bool show_zero_positions = false;
+            ImGui::Checkbox("Show zero-positions", &show_zero_positions);
+            ImGui::SameLine();
 
-            if (show_non_zero_only && position.size <= 0)
-                continue;
-            if (!show_cash && strcmp(position.position_type, "CASH") == 0)
-                continue;
+            static bool show_cash = true;
+            ImGui::Checkbox("Cash", &show_cash);
 
-            if (ImGui::TreeNode(product ? product->name : position.id)) {
-                ImGui::Text("ID:                         %s", position.id);
-                ImGui::Text("Position type:              %s", position.position_type);
-                ImGui::Text("Size:                       %d", position.size);
-                ImGui::Text("Price:                      %.2f", position.price);
-                ImGui::Text("Value:                      %.2f", position.value);
-                ImGui::Text("Pl base:                    %.2f", position.pl_base);
-                ImGui::Text("Today pl base:              %.2f", position.today_pl_base);
-                ImGui::Text("Portfolio value correction: %.2f", position.portfolio_value_correction);
-                ImGui::Text("Break even price:           %.2f", position.break_even_price);
-                ImGui::Text("Average fx rate:            %.2f", position.average_fx_rate);
-                ImGui::Text("Realized product pl:        %.2f", position.realized_product_pl);
-                ImGui::Text("Realized fx pl:             %.2f", position.realized_fx_pl);
-                ImGui::Text("Today realized product pl:  %.2f", position.today_realized_product_pl);
-                ImGui::Text("Today realized fx pl:       %.2f", position.today_realized_fx_pl);
-                ImGui::TreePop();
+            ImGuiTableFlags table_flags = 0;
+            table_flags |= ImGuiTableFlags_SizingFixedFit;
+            table_flags |= ImGuiTableFlags_NoHostExtendX;
+            table_flags |= ImGuiTableFlags_RowBg;
+            table_flags |= ImGuiTableFlags_BordersOuter;
+            table_flags |= ImGuiTableFlags_BordersV;
+            table_flags |= ImGuiTableFlags_NoBordersInBody;
+            table_flags |= ImGuiTableFlags_ScrollY;
+
+            if (ImGui::BeginTable("transactions", 5, table_flags)) {
+                ImGui::TableSetupColumn("Type");
+                ImGui::TableSetupColumn("#");
+                ImGui::TableSetupColumn("Name");
+                ImGui::TableSetupColumn("Price");
+                ImGui::TableSetupColumn("Value");
+                ImGui::TableSetupScrollFreeze(0, 1);  // Keep header always visible
+                ImGui::TableHeadersRow();
+
+                for (size_t i = 0; i < dg.portfolio.count; ++i) {
+                    dg_position position = dg.portfolio.positions[i];
+                    if (!show_cash && strcmp(position.position_type, "CASH") == 0) continue;
+                    if (!show_zero_positions && position.size == 0) continue;
+
+                    ImGui::PushID(i);
+
+                    dg_product *product = dg_lookup_product_by_id(&dg, atoi(position.id));
+
+                    ImGui::TableNextRow();
+                    ImGui::TableSetColumnIndex(0);
+                    ImGui::Text("%s", position.position_type);
+
+                    ImGui::TableNextColumn();
+                    ImGui::Text("%d", position.size);
+
+                    ImGui::TableNextColumn();
+                    if (strcmp(position.position_type, "CASH") == 0) {
+                        ImGui::Text("%s", position.id);
+                    } else {
+                        ImGui::Text("%s", product->name);
+                    }
+
+                    ImGui::TableNextColumn();
+                    ImGui::Text("%.2f", position.price);
+
+                    ImGui::TableNextColumn();
+                    ImGui::Text("%.2f", position.value);
+
+                    ImGui::PopID();
+                }
+                ImGui::EndTable();
             }
         }
+
+        ImGui::EndChild();
     }
+    ImGui::SameLine();
+    {
+        ImGui::BeginChild("Properties", ImVec2(0, ImGui::GetContentRegionAvail().y), ImGuiChildFlags_None, ImGuiWindowFlags_None);
+        ImGui::SeparatorText("Properties");
+
+        ImGui::EndChild();
+    }
+
+    // if (dg.portfolio.count == 0) {
+    //     ImGui::Text("Portfolio has not been loaded yet");
+    //     if (ImGui::Button("Get portfolio")) {
+    //         if (!dg_get_portfolio(&dg)) {
+    //             fprintf(stderr, "Failed to get portfolio\n");
+    //         }
+    //     }
+    // } else {
+    // for (auto i = 0; i < dg.portfolio.count; i++) {
+    //     dg_position position = dg.portfolio.positions[i];
+
+    //     const dg_product *product = NULL;
+    //     if (strcmp(position.position_type, "PRODUCT") == 0) {
+    //         // product = dg_get_product_info_by_id(&dg, atoi(position.id));
+    //     }
+
+    //     if (show_non_zero_only && position.size <= 0)
+    //         continue;
+    //     if (!show_cash && strcmp(position.position_type, "CASH") == 0)
+    //         continue;
+
+    //     if (ImGui::TreeNode(product ? product->name : position.id)) {
+    //         ImGui::Text("ID:                         %s", position.id);
+    //         ImGui::Text("Position type:              %s", position.position_type);
+    //         ImGui::Text("Size:                       %d", position.size);
+    //         ImGui::Text("Price:                      %.2f", position.price);
+    //         ImGui::Text("Value:                      %.2f", position.value);
+    //         ImGui::Text("Pl base:                    %.2f", position.pl_base);
+    //         ImGui::Text("Today pl base:              %.2f", position.today_pl_base);
+    //         ImGui::Text("Portfolio value correction: %.2f", position.portfolio_value_correction);
+    //         ImGui::Text("Break even price:           %.2f", position.break_even_price);
+    //         ImGui::Text("Average fx rate:            %.2f", position.average_fx_rate);
+    //         ImGui::Text("Realized product pl:        %.2f", position.realized_product_pl);
+    //         ImGui::Text("Realized fx pl:             %.2f", position.realized_fx_pl);
+    //         ImGui::Text("Today realized product pl:  %.2f", position.today_realized_product_pl);
+    //         ImGui::Text("Today realized fx pl:       %.2f", position.today_realized_fx_pl);
+    //         ImGui::TreePop();
+    //     }
+    // }
+    // }
     // ImGui::End();
 }
+
+/*
 
 void render_product_chart(dg_product_chart chart) {
     char plot_title[64];
@@ -659,7 +737,7 @@ void render_app() {
                 ImGui::EndTabItem();
             }
             if (ImGui::BeginTabItem("Portfolio")) {
-                // render_portfolio();
+                render_portfolio();
                 ImGui::EndTabItem();
             }
             if (ImGui::BeginTabItem("Transactions")) {

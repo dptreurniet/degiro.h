@@ -4,6 +4,7 @@
 
 #include "curl.h"
 #include "dictionary.h"
+#include "portfolio.h"
 #include "products.h"
 #include "user.h"
 
@@ -38,6 +39,7 @@ typedef struct dg_context {
     dg_user_config user_config;
     dg_user_data user_data;
     dg_products products;
+    dg_portfolio portfolio;
 } dg_context;
 
 typedef struct dg_login_data {
