@@ -1,28 +1,12 @@
 #include "chart.h"
 
 #include <cjson/cJSON.h>
+#include <time.h>
 
 #include "defines.h"
 #include "dg_curl.h"
 #include "dg_utils.h"
 #include "nob.h"
-
-const char *dg__chart_period_str(dg_chart_period period) {
-    switch (period) {
-        case PERIOD_1D:
-            return "1D";
-        case PERIOD_1W:
-            return "1W";
-        case PERIOD_1M:
-            return "1M";
-        case PERIOD_6M:
-            return "6M";
-        case PERIOD_1Y:
-            return "1Y";
-        default:
-            NOB_UNREACHABLE("Period_to_string not defined...");
-    }
-}
 
 bool dg__parse_chart_response_time_data(cJSON *item, dg_product_chart *chart) {
     // Get series start time
@@ -168,43 +152,53 @@ bool dg__parse_chart_response(cJSON *data, dg_product_chart *chart) {
 
 bool dg_get_product_info_chart(dg_context *ctx, dg_product_chart_options opts, dg_product_chart *chart) {
     // https://charting.vwdservices.com/hchart/v1/deGiro/data.js?requestid=1&resolution=P1D&culture=nl-NL&period=P50Y&series=issueid%3A485013849&series=price%3Aissueid%3A485013849&format=json&callback=vwd.hchart.seriesRequestManager.sync_response&userToken=4626342&tz=Europe%2FAmsterdam
+    // https://charting.vwdservices.com/hchart/v1/deGiro/data.js?requestid=1&resolution=P1D&culture=nl-NL&start=2025-01-01&end=2025-10-18&series=vwdkey:IE0007Y8Y157.TRADE,E&series=price:vwdkey:IE0007Y8Y157.TRADE,E&format=json&callback=vwd.hchart.seriesRequestManager.sync_response&userToken=4626342&tz=Europe/Amsterdam
+
+    nob_log(NOB_INFO, "Getting price info of %s", opts.product.name);
 
     chart->product = opts.product;
 
-    const char *resolution = "1D";
+    Nob_String_Builder url = {0};
+    nob_sb_appendf(&url, "%s", DEGIRO_GET_CHART_URL);
+    nob_sb_appendf(&url, "?series=%s:%s", opts.product.vwd_identifier_type, opts.product.vwd_id);
+    nob_sb_appendf(&url, "&series=price:%s:%s", opts.product.vwd_identifier_type, opts.product.vwd_id);
+
     switch (opts.period) {
         case PERIOD_1D:
-            resolution = "T1M";
+            nob_sb_appendf(&url, "&period=P1D");
+            nob_sb_appendf(&url, "&resolution=PT1M");
             break;
         case PERIOD_1W:
-            resolution = "T30M";
+            nob_sb_appendf(&url, "&period=P1W");
+            nob_sb_appendf(&url, "&resolution=PT30M");
             break;
         case PERIOD_1M:
-            resolution = "T2H";
+            nob_sb_appendf(&url, "&period=P1M");
+            nob_sb_appendf(&url, "&resolution=PT2H");
             break;
         case PERIOD_6M:
-        case PERIOD_1Y:
-            resolution = "1D";
+            nob_sb_appendf(&url, "&period=P6M");
+            nob_sb_appendf(&url, "&resolution=P1D");
             break;
+        case PERIOD_1Y:
+            nob_sb_appendf(&url, "&period=P1Y");
+            nob_sb_appendf(&url, "&resolution=P1D");
+            break;
+        case PERIOD_YTD: {
+            time_t t_now = time(NULL);
+            struct tm *now = localtime(&t_now);
+            nob_sb_appendf(&url, "&start=%04d-01-01", now->tm_year + 1900);
+            nob_sb_appendf(&url, "&end=%04d-%02d-%02d", now->tm_year + 1900, now->tm_mon + 1, now->tm_mday);
+            break;
+        }
         default:
             NOB_UNREACHABLE("Undefined period");
     }
 
-    nob_log(NOB_INFO, "Getting price info with the following options:");
-    nob_log(NOB_INFO, " - Product: %s", opts.product.name);
-    nob_log(NOB_INFO, " - Period: %s", dg__chart_period_str(opts.period));
-    nob_log(NOB_INFO, " - Resolution: %s", resolution);
-
-    Nob_String_Builder url = {0};
-    nob_sb_appendf(&url, "%s?", DEGIRO_GET_CHART_URL);
-    nob_sb_appendf(&url, "series=%s:%s&", opts.product.vwd_identifier_type, opts.product.vwd_id);
-    nob_sb_appendf(&url, "series=price:%s:%s&", opts.product.vwd_identifier_type, opts.product.vwd_id);
-    nob_sb_appendf(&url, "period=P%s&", dg__chart_period_str(opts.period));
-    nob_sb_appendf(&url, "resolution=P%s&", resolution);
-    nob_sb_appendf(&url, "userToken=%d&", ctx->user_config.client_id);
-    nob_sb_appendf(&url, "culture=nl-NL&");
-    nob_sb_appendf(&url, "format=json&");
-    nob_sb_appendf(&url, "tz=Europe/Amsterdam");
+    nob_sb_appendf(&url, "&userToken=%d", ctx->user_config.client_id);
+    nob_sb_appendf(&url, "&culture=nl-NL");
+    nob_sb_appendf(&url, "&format=json");
+    nob_sb_appendf(&url, "&tz=Europe/Amsterdam");
     nob_sb_append_null(&url);
 
     dg__set_curl_url(ctx, url.items);

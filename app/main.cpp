@@ -282,6 +282,10 @@ void render_products() {
 
                 ImGui::Text("Chart period:");
                 ImGui::SameLine();
+                if (ImGui::RadioButton("YTD", options.period == PERIOD_YTD)) {
+                    options.period = PERIOD_YTD;
+                }
+                ImGui::SameLine();
                 if (ImGui::RadioButton("1D", options.period == PERIOD_1D)) {
                     options.period = PERIOD_1D;
                 }
