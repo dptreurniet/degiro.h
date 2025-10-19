@@ -171,7 +171,7 @@ void render_products() {
             static size_t selected_ix = -1;
             for (size_t i = 0; i < search_results.count; ++i) {
                 dg_product p = search_results.items[i];
-                dg_exchange *exchange = dg_lookup_exchange_by_id(&dg, p.exchange_id);
+                dg_exchange* exchange = dg_lookup_exchange_by_id(&dg, p.exchange_id);
                 std::ostringstream line_str;
                 line_str << ((p.symbol == NULL) ? "????" : p.symbol) << " | " << p.isin << " | " << exchange->hiq_abbr << " | " << p.name;
                 if (ImGui::Selectable(line_str.str().c_str(), i == selected_ix)) {
@@ -255,9 +255,9 @@ void render_products() {
             ImGui::Text("Active:              %s", product.active ? "true" : "false");
             ImGui::Text("Exchange:            * %s", dg_lookup_exchange_by_id(&dg, product.exchange_id)->name);
             ImGui::Text("Only EOD prices:     %s", product.only_eod_prices ? "true" : "false");
-            ImGui::Text("Order time types:    %s", product.order_time_types);
-            ImGui::Text("Buy order types:     %s", dg_get_order_type_str(product.buy_order_types));
-            ImGui::Text("Sell order types:    %s", dg_get_order_type_str(product.sell_order_types));
+            ImGui::Text("Order time types:    0x%02x (%s)", product.order_time_types, dg_get_order_time_type_str(product.order_time_types));
+            ImGui::Text("Buy order types:     0x%02x (%s)", product.buy_order_types, dg_get_order_type_str(product.buy_order_types));
+            ImGui::Text("Sell order types:    0x%02x (%s)", product.sell_order_types, dg_get_order_type_str(product.sell_order_types));
             ImGui::Text("Close price:         %s %.2f", dg_currency_symbol(product.currency), product.close_price);
             ImGui::Text("Close price date:    %s", product.close_price_date);
             ImGui::Text("Is shortable:        %s", product.is_shortable ? "true" : "false");
@@ -414,7 +414,7 @@ void render_portfolio() {
 
                     ImGui::PushID(i);
 
-                    dg_product *product = dg_lookup_product_by_id(&dg, atoi(position.id));
+                    dg_product* product = dg_lookup_product_by_id(&dg, atoi(position.id));
 
                     ImGui::TableNextRow();
                     ImGui::TableSetColumnIndex(0);
@@ -615,7 +615,7 @@ void render_transactions() {
 
                     ImGui::TableNextRow();
                     ImGui::TableSetColumnIndex(0);
-                    char *trimmed_date = (char *)malloc(sizeof(char) * 11);
+                    char* trimmed_date = (char*)malloc(sizeof(char) * 11);
                     strncpy(trimmed_date, t.date, 10);
                     trimmed_date[10] = '\0';
                     if (ImGui::Selectable(trimmed_date, i == selected_ix, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap)) {
@@ -624,7 +624,7 @@ void render_transactions() {
                     free(trimmed_date);
 
                     ImGui::TableNextColumn();
-                    const char *buysell = strcmp(t.buysell, "S") == 0 ? " Sold " : "Bought";
+                    const char* buysell = strcmp(t.buysell, "S") == 0 ? " Sold " : "Bought";
                     if (strcmp(t.buysell, "S") == 0) {
                         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(.7, 0, 0, 1));
                         ImGui::Button("Sell", ImVec2(50, 0));
@@ -772,11 +772,11 @@ void render_app() {
         ImPlot::ShowDemoWindow(&show_implot_demo_window);
 }
 
-static void glfw_error_callback(int error, const char *description) {
+static void glfw_error_callback(int error, const char* description) {
     fprintf(stderr, "GLFW Error %d: %s\n", error, description);
 }
 
-int main(int, char **) {
+int main(int, char**) {
     if (!dg_init(&dg)) {
         fprintf(stderr, "Failed to initialize DeGiro\n");
         return 1;
@@ -787,7 +787,7 @@ int main(int, char **) {
         return 1;
 
     // Create window with graphics context
-    GLFWwindow *window = glfwCreateWindow(1440, 900, "DeGiro.h test application", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow(1440, 900, "DeGiro.h test application", nullptr, nullptr);
     if (window == nullptr)
         return 1;
     glfwMakeContextCurrent(window);
@@ -796,7 +796,7 @@ int main(int, char **) {
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
-    ImGuiIO &io = ImGui::GetIO();
+    ImGuiIO& io = ImGui::GetIO();
     (void)io;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
