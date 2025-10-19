@@ -9,30 +9,6 @@
 #include "dg_utils.h"
 #include "nob.h"
 
-const char* dg_get_order_type_str(dg_order_type_flags flags) {
-    Nob_String_Builder sb = {0};
-    if ((flags & (1 << DG_ORDER_TYPE_LIMITED)) != 0) nob_sb_appendf(&sb, "Limit, ");
-    if ((flags & (1 << DG_ORDER_TYPE_STOP_LIMITED)) != 0) nob_sb_appendf(&sb, "Stoplimit, ");
-    if ((flags & (1 << DG_ORDER_TYPE_MARKET_ORDER)) != 0) nob_sb_appendf(&sb, "Market, ");
-    if ((flags & (1 << DG_ORDER_TYPE_STOP_LOSS)) != 0) nob_sb_appendf(&sb, "Stoploss, ");
-    if ((flags & (1 << DG_ORDER_TYPE_AMOUNT)) != 0) nob_sb_appendf(&sb, "Amount, ");
-    if ((flags & (1 << DG_ORDER_TYPE_SIZE)) != 0) nob_sb_appendf(&sb, "Size, ");
-    if (sb.count > 0) sb.count -= 2;  // remove trailing comma
-
-    nob_sb_append_null(&sb);
-    return sb.items;
-}
-
-const char* dg_get_order_time_type_str(dg_order_time_type_flags flags) {
-    Nob_String_Builder sb = {0};
-    if ((flags & (1 << DG_ORDER_TIME_TYPE_DAY)) != 0) nob_sb_appendf(&sb, "Day, ");
-    if ((flags & (1 << DG_ORDER_TIME_TYPE_PERMANENT)) != 0) nob_sb_appendf(&sb, "Permanent, ");
-    if (sb.count > 0) sb.count -= 2;  // remove trailing comma
-
-    nob_sb_append_null(&sb);
-    return sb.items;
-}
-
 bool dg__parse_order_time_type_flags(cJSON* root, const char* key, dg_order_time_type_flags* flag) {
     *flag = 0;
 
@@ -306,34 +282,4 @@ bool dg_search_products(dg_context* ctx, dg_search_products_options options, dg_
     result->count = products.count;
 
     return true;
-}
-
-const char* dg_product_type_str(dg_product_type type_id) {
-    switch (type_id) {
-        case DG_PRODUCT_TYPE_STOCK:
-            return "STOCK";
-        case DG_PRODUCT_TYPE_INDEX:
-            return "INDEX";
-        case DG_PRODUCT_TYPE_BOND:
-            return "BOND";
-        case DG_PRODUCT_TYPE_FUTURE:
-            return "FUTURE";
-        case DG_PRODUCT_TYPE_OPTION:
-            return "OPTION";
-        case DG_PRODUCT_TYPE_FUND:
-            return "FUND";
-        case DG_PRODUCT_TYPE_LEVERAGE_PRODUCT:
-            return "PRODUCT";
-        case DG_PRODUCT_TYPE_ETF:
-            return "ETF";
-        case DG_PRODUCT_TYPE_CFD:
-            return "CFD";
-        case DG_PRODUCT_TYPE_WARRANT:
-            return "WARRANT";
-        case DG_PRODUCT_TYPE_CURRENCY:
-            return "CURRENCY";
-        default:
-            NOB_UNREACHABLE("Missing type case");
-    }
-    return "";
 }

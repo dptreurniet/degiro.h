@@ -131,14 +131,65 @@ void render_user_info() {
         }
 
         if (ImGui::TreeNode("Flags")) {
-            ImGui::Text("Can upgrade:             %s", dg.user_data.can_upgrade ? "true" : "false");
-            ImGui::Text("Is allocation available: %s", dg.user_data.is_allocation_available ? "true" : "false");
-            ImGui::Text("Is am client active:     %s", dg.user_data.is_am_client_active ? "true" : "false");
-            ImGui::Text("Is collective portfolio: %s", dg.user_data.is_collective_portfolio ? "true" : "false");
-            ImGui::Text("Is isk client:           %s", dg.user_data.is_isk_client ? "true" : "false");
-            ImGui::Text("Is withdrawal available: %s", dg.user_data.is_withdrawal_available ? "true" : "false");
+            ImGui::Text("Can upgrade:             %s", dg.user_data.can_upgrade ? "yes" : "no");
+            ImGui::Text("Is allocation available: %s", dg.user_data.is_allocation_available ? "yes" : "no");
+            ImGui::Text("Is am client active:     %s", dg.user_data.is_am_client_active ? "yes" : "no");
+            ImGui::Text("Is collective portfolio: %s", dg.user_data.is_collective_portfolio ? "yes" : "no");
+            ImGui::Text("Is isk client:           %s", dg.user_data.is_isk_client ? "yes" : "no");
+            ImGui::Text("Is withdrawal available: %s", dg.user_data.is_withdrawal_available ? "yes" : "no");
             ImGui::TreePop();
         }
+    }
+}
+
+std::string dg_get_order_type_str(dg_order_type_flags flags) {
+    std::string str;
+    if ((flags & (1 << DG_ORDER_TYPE_LIMITED)) != 0) str += "Limit, ";
+    if ((flags & (1 << DG_ORDER_TYPE_STOP_LIMITED)) != 0) str += "Stoplimit, ";
+    if ((flags & (1 << DG_ORDER_TYPE_MARKET_ORDER)) != 0) str += "Market, ";
+    if ((flags & (1 << DG_ORDER_TYPE_STOP_LOSS)) != 0) str += "Stoploss, ";
+    if ((flags & (1 << DG_ORDER_TYPE_AMOUNT)) != 0) str += "Amount, ";
+    if ((flags & (1 << DG_ORDER_TYPE_SIZE)) != 0) str += "Size, ";
+    if (str.size() == 0) return "None";
+    str.resize(str.size() - 2);  // remove trailing comma
+    return str;
+}
+
+std::string dg_get_order_time_type_str(dg_order_time_type_flags flags) {
+    std::string str;
+    if ((flags & (1 << DG_ORDER_TIME_TYPE_DAY)) != 0) str += "Day, ";
+    if ((flags & (1 << DG_ORDER_TIME_TYPE_PERMANENT)) != 0) str += "Permanent, ";
+    if (str.size() == 0) return "None";
+    str.resize(str.size() - 2);  // remove trailing comma
+    return str;
+}
+
+std::string dg_product_type_str(dg_product_type type_id) {
+    switch (type_id) {
+        case DG_PRODUCT_TYPE_STOCK:
+            return "STOCK";
+        case DG_PRODUCT_TYPE_INDEX:
+            return "INDEX";
+        case DG_PRODUCT_TYPE_BOND:
+            return "BOND";
+        case DG_PRODUCT_TYPE_FUTURE:
+            return "FUTURE";
+        case DG_PRODUCT_TYPE_OPTION:
+            return "OPTION";
+        case DG_PRODUCT_TYPE_FUND:
+            return "FUND";
+        case DG_PRODUCT_TYPE_LEVERAGE_PRODUCT:
+            return "PRODUCT";
+        case DG_PRODUCT_TYPE_ETF:
+            return "ETF";
+        case DG_PRODUCT_TYPE_CFD:
+            return "CFD";
+        case DG_PRODUCT_TYPE_WARRANT:
+            return "WARRANT";
+        case DG_PRODUCT_TYPE_CURRENCY:
+            return "CURRENCY";
+        default:
+            return "Error: undefined case";
     }
 }
 
@@ -248,25 +299,25 @@ void render_products() {
             ImGui::Text("ISIN:                %s", product.isin);
             ImGui::Text("Symbol:              %s", product.symbol);
             ImGui::Text("Contract size:       %d", product.contract_size);
-            ImGui::Text("Product type:        %s", dg_product_type_str(product.product_type));
-            ImGui::Text("Tradable:            %s", product.tradable ? "true" : "false");
+            ImGui::Text("Product type:        %s", dg_product_type_str(product.product_type).c_str());
+            ImGui::Text("Tradable:            %s", product.tradable ? "yes" : "no");
             ImGui::Text("Category:            %s", product.category);
             ImGui::Text("Currency:            %s (%s)", dg_currency_str(product.currency), dg_currency_symbol(product.currency));
-            ImGui::Text("Active:              %s", product.active ? "true" : "false");
+            ImGui::Text("Active:              %s", product.active ? "yes" : "no");
             ImGui::Text("Exchange:            * %s", dg_lookup_exchange_by_id(&dg, product.exchange_id)->name);
-            ImGui::Text("Only EOD prices:     %s", product.only_eod_prices ? "true" : "false");
-            ImGui::Text("Order time types:    0x%02x (%s)", product.order_time_types, dg_get_order_time_type_str(product.order_time_types));
-            ImGui::Text("Buy order types:     0x%02x (%s)", product.buy_order_types, dg_get_order_type_str(product.buy_order_types));
-            ImGui::Text("Sell order types:    0x%02x (%s)", product.sell_order_types, dg_get_order_type_str(product.sell_order_types));
+            ImGui::Text("Only EOD prices:     %s", product.only_eod_prices ? "yes" : "no");
+            ImGui::Text("Order time types:    0x%02x (%s)", product.order_time_types, dg_get_order_time_type_str(product.order_time_types).c_str());
+            ImGui::Text("Buy order types:     0x%02x (%s)", product.buy_order_types, dg_get_order_type_str(product.buy_order_types).c_str());
+            ImGui::Text("Sell order types:    0x%02x (%s)", product.sell_order_types, dg_get_order_type_str(product.sell_order_types).c_str());
             ImGui::Text("Close price:         %s %.2f", dg_currency_symbol(product.currency), product.close_price);
             ImGui::Text("Close price date:    %s", product.close_price_date);
-            ImGui::Text("Is shortable:        %s", product.is_shortable ? "true" : "false");
+            ImGui::Text("Is shortable:        %s", product.is_shortable ? "yes" : "no");
             ImGui::Text("Feed quality:        %s", product.feed_quality);
             ImGui::Text("Order book depth:    %d", product.order_book_depth);
             ImGui::Text("Vwd identifier type: %s", product.vwd_identifier_type);
             ImGui::Text("Vwd id:              %s", product.vwd_id);
-            ImGui::Text("Quality switchable:  %s", product.quality_switchable ? "true" : "false");
-            ImGui::Text("Quality switch free: %s", product.quality_switch_free ? "true" : "false");
+            ImGui::Text("Quality switchable:  %s", product.quality_switchable ? "yes" : "no");
+            ImGui::Text("Quality switch free: %s", product.quality_switch_free ? "yes" : "no");
             ImGui::Text("Vwd module id:       %d", product.vwd_module_id);
             ImGui::Text("                     * dictionary lookup");
 

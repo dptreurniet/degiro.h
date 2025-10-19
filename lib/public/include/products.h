@@ -24,15 +24,12 @@ typedef enum {
     DG_PRODUCT_TYPE_CURRENCY,
 } dg_product_type;
 
-const char* dg_product_type_str(dg_product_type type);
-
 typedef enum {
     DG_ORDER_TIME_TYPE_DAY,
     DG_ORDER_TIME_TYPE_PERMANENT,
 } dg_order_time_type;
 
 typedef uint8_t dg_order_time_type_flags;
-const char* dg_get_order_time_type_str(dg_order_time_type_flags flags);
 
 typedef enum {
     DG_ORDER_TYPE_LIMITED,
@@ -44,7 +41,6 @@ typedef enum {
 } dg_order_type;
 
 typedef uint8_t dg_order_type_flags;
-const char* dg_get_order_type_str(dg_order_type_flags flags);
 
 typedef struct dg_product {
     int id;
