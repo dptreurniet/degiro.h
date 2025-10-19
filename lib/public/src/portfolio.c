@@ -9,32 +9,57 @@
 #include "dg_utils.h"
 #include "nob.h"
 
-bool dg__parse_portfolio(dg_context *ctx) {
-    cJSON *json = cJSON_Parse(ctx->curl.response.data);
+bool dg__parse_position_type(cJSON* root, const char* json_key, dg_position_type* destination) {
+    cJSON* obj = cJSON_GetObjectItem(root, json_key);
+    if (!obj) return false;
+
+    char* str;
+    if (cJSON_IsString(obj) && (obj->valuestring != NULL)) {
+        str = strdup(obj->valuestring);
+    } else {
+        nob_log(NOB_WARNING, "Expected a string, but found somethind else");
+        return false;
+    }
+
+    if (strcmp(str, "PRODUCT") == 0)
+        *destination = DG_POSITION_TYPE_PRODUCT;
+    else if (strcmp(str, "CASH") == 0)
+        *destination = DG_POSITION_TYPE_CASH;
+    else {
+        nob_log(NOB_ERROR, "Unknown position type");
+        return false;
+    }
+
+    return true;
+}
+
+bool dg__parse_portfolio(dg_context* ctx) {
+    cJSON* json = cJSON_Parse(ctx->curl.response.data);
     if (json == NULL) {
         nob_log(NOB_INFO, "Error parsing JSON");
         return false;
     }
 
-    cJSON *pf = cJSON_GetObjectItem(json, "portfolio");
+    cJSON* pf = cJSON_GetObjectItem(json, "portfolio");
     if (!cJSON_IsObject(pf)) {
         nob_log(NOB_INFO, "No \"portfolio\" field in JSON");
         return false;
     }
 
-    cJSON *json_positions = cJSON_GetObjectItemCaseSensitive(pf, "value");
+    cJSON* json_positions = cJSON_GetObjectItemCaseSensitive(pf, "value");
     size_t n_positions = (size_t)cJSON_GetArraySize(json_positions);
 
     dg_da_positions positions = {0};
     nob_da_reserve(&positions, n_positions);
 
-    cJSON *position = NULL;
+    cJSON* position = NULL;
     cJSON_ArrayForEach(position, json_positions) {
-        cJSON *values = cJSON_GetObjectItemCaseSensitive(position, "value");
-        cJSON *value = NULL;
+        cJSON* values = cJSON_GetObjectItemCaseSensitive(position, "value");
+        cJSON* value = NULL;
 
         dg_position pos = {0};
-        char *key;
+        char* key;
+        char* temp_id;
 
         cJSON_ArrayForEach(value, values) {
             if (!dg__parse_string(value, "name", &key)) {
@@ -43,9 +68,9 @@ bool dg__parse_portfolio(dg_context *ctx) {
             }
 
             if (strcmp(key, "id") == 0)
-                dg__parse_string(value, "value", &pos.id);
+                dg__parse_string(value, "value", &temp_id);
             else if (strcmp(key, "positionType") == 0) {
-                dg__parse_string(value, "value", &pos.position_type);
+                dg__parse_position_type(value, "value", &pos.position_type);
             } else if (strcmp(key, "size") == 0) {
                 dg__parse_int(value, "value", &pos.size);
             } else if (strcmp(key, "price") == 0) {
@@ -75,11 +100,19 @@ bool dg__parse_portfolio(dg_context *ctx) {
             }
         }
 
+        // In case of a CASH position, the ID is not an int, but a string
+        if (pos.position_type == DG_POSITION_TYPE_CASH) {
+            pos.cash_id = temp_id;
+            pos.id = 0;
+        } else {
+            pos.id = atoi(temp_id);
+        }
+
         nob_da_append(&positions, pos);
     }
 
     if (ctx->portfolio.positions != NULL) free(ctx->portfolio.positions);
-    ctx->portfolio.positions = (dg_position *)malloc(sizeof(dg_position) * positions.count);
+    ctx->portfolio.positions = (dg_position*)malloc(sizeof(dg_position) * positions.count);
     memcpy(ctx->portfolio.positions, positions.items, sizeof(dg_position) * positions.count);
     ctx->portfolio.count = positions.count;
 
@@ -89,7 +122,7 @@ bool dg__parse_portfolio(dg_context *ctx) {
     return true;
 }
 
-bool dg_get_portfolio(dg_context *ctx) {
+bool dg_get_portfolio(dg_context* ctx) {
     nob_log(NOB_INFO, "Getting portfolio");
     if (!ctx->user_config.session_id) {
         nob_log(NOB_ERROR, "No session id defined");

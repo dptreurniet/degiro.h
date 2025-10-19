@@ -18,6 +18,10 @@ extern "C" {
 }
 #include "secrets.h"
 
+#define COLOR_GREEN ImVec4(0, .7, 0, 1)
+#define COLOR_RED ImVec4(.7, 0, 0, 1)
+#define COLOR_BLUE ImVec4(0, 0, .7, 1)
+
 bool show_demo_window = true;
 bool show_implot_demo_window = true;
 bool show_another_window = false;
@@ -74,6 +78,163 @@ void render_login_popup() {
             ImGui::CloseCurrentPopup();
         }
         ImGui::EndPopup();
+    }
+}
+
+void render_portfolio() {
+    {
+        static size_t selected_ix = -1;
+        enum type { POSITION,
+                    TRANSACTION };
+        static type selected_type = POSITION;
+
+        ImGui::BeginChild("Top", ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y * 0.5f), ImGuiChildFlags_None, ImGuiWindowFlags_None);
+        {
+            ImGui::BeginChild("Positions", ImVec2(ImGui::GetContentRegionAvail().x * 0.5f, ImGui::GetContentRegionAvail().y), ImGuiChildFlags_None, ImGuiWindowFlags_None);
+            ImGui::SeparatorText("Positions");
+
+            if (dg.portfolio.count == 0) {
+                ImGui::Text("Portfolio is not yet loaded or empty");
+                if (ImGui::Button("Get portfolio")) {
+                    if (!dg_get_portfolio(&dg)) {
+                        fprintf(stderr, "Failed to get portfolio\n");
+                    }
+                }
+            } else {
+                static bool show_closed = false;
+                ImGui::Checkbox("Show closed positions", &show_closed);
+                ImGui::SameLine();
+
+                static bool show_cash = true;
+                ImGui::Checkbox("Show cash", &show_cash);
+
+                ImGuiTableFlags table_flags = 0;
+                table_flags |= ImGuiTableFlags_SizingFixedFit;
+                table_flags |= ImGuiTableFlags_NoHostExtendX;
+                table_flags |= ImGuiTableFlags_RowBg;
+                table_flags |= ImGuiTableFlags_BordersOuter;
+                table_flags |= ImGuiTableFlags_BordersV;
+                table_flags |= ImGuiTableFlags_NoBordersInBody;
+                table_flags |= ImGuiTableFlags_ScrollY;
+
+                if (ImGui::BeginTable("transactions", 5, table_flags)) {
+                    ImGui::TableSetupColumn("Type");
+                    ImGui::TableSetupColumn("#");
+                    ImGui::TableSetupColumn("Name");
+                    ImGui::TableSetupColumn("Price");
+                    ImGui::TableSetupColumn("Value");
+                    ImGui::TableSetupScrollFreeze(0, 1);  // Keep header always visible
+                    ImGui::TableHeadersRow();
+
+                    for (size_t i = 0; i < dg.portfolio.count; ++i) {
+                        dg_position position = dg.portfolio.positions[i];
+                        if (!show_cash && position.position_type == DG_POSITION_TYPE_CASH) continue;
+                        if (!show_closed && position.size == 0) continue;
+
+                        ImGui::PushID(i);
+
+                        dg_product* product = dg_lookup_product_by_id(&dg, position.id);
+
+                        ImGui::TableNextRow();
+                        ImGui::TableSetColumnIndex(0);
+
+                        std::string label_str;
+                        switch (position.position_type) {
+                            case DG_POSITION_TYPE_CASH:
+                                label_str = " CASH ";
+                                break;
+                            case DG_POSITION_TYPE_PRODUCT:
+                                label_str = " PROD ";
+                                break;
+                            default:
+                                label_str = " ???? ";
+                        }
+
+                        if (ImGui::Selectable(label_str.c_str(), i == selected_ix, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap)) {
+                            selected_ix = i;
+                            selected_type = POSITION;
+                        }
+
+                        ImGui::TableNextColumn();
+                        if (position.position_type != DG_POSITION_TYPE_CASH)
+                            ImGui::Text("%d", position.size);
+
+                        ImGui::TableNextColumn();
+                        if (position.position_type == DG_POSITION_TYPE_CASH)
+                            ImGui::Text("%s  ", position.cash_id);
+                        else
+                            ImGui::Text("%s  ", product->name);
+
+                        ImGui::TableNextColumn();
+                        if (position.position_type != DG_POSITION_TYPE_CASH)
+                            ImGui::Text("%s %.2f  ", dg_currency_symbol(product->currency), position.price);
+
+                        ImGui::TableNextColumn();
+                        if (position.position_type != DG_POSITION_TYPE_CASH)
+                            ImGui::Text("%s %.2f  ", dg_currency_symbol(product->currency), position.value);
+                        else
+                            ImGui::Text("%.2f  ", position.value);
+
+                        ImGui::PopID();
+                    }
+                    ImGui::EndTable();
+                }
+            }
+
+            ImGui::EndChild();
+        }
+        ImGui::SameLine();
+        {
+            ImGui::BeginChild("Details", ImVec2(ImGui::GetContentRegionAvail().x * 0.5f, ImGui::GetContentRegionAvail().y), ImGuiChildFlags_None, ImGuiWindowFlags_None);
+            ImGui::SeparatorText("Details");
+
+            switch (selected_type) {
+                case POSITION: {
+                    if (selected_ix == -1) {
+                        ImGui::Text("Select a position");
+                    } else {
+                        dg_position pos = dg.portfolio.positions[selected_ix];
+                        ImGui::Text("ID:                         %d", pos.id);
+                        ImGui::Text("Cash ID:                    %s", pos.cash_id);
+                        switch (pos.position_type) {
+                            case DG_POSITION_TYPE_PRODUCT:
+                                ImGui::Text("Type:                       PRODUCT");
+                                break;
+                            case DG_POSITION_TYPE_CASH:
+                                ImGui::Text("Type:                       CASH");
+                                break;
+                        }
+                        ImGui::Text("Size:                       %d", pos.size);
+                        ImGui::Text("Price:                      %.2f", pos.price);
+                        ImGui::Text("Value:                      %.2f", pos.value);
+                        // TODO: accrued_interest;
+                        ImGui::Text("Pl base:                    %.2f", pos.pl_base);
+                        ImGui::Text("Today pl base:              %.2f", pos.today_pl_base);
+                        ImGui::Text("Portfolio value correction: %.2f", pos.portfolio_value_correction);
+                        ImGui::Text("Break even price:           %.2f", pos.break_even_price);
+                        ImGui::Text("Average fx rate:            %.2f", pos.average_fx_rate);
+                        ImGui::Text("Realized_ product_ pl:      %.2f", pos.realized_product_pl);
+                        ImGui::Text("Realized fx pl:             %.2f", pos.realized_fx_pl);
+                        ImGui::Text("Today realized product pl:  %.2f", pos.today_realized_product_pl);
+                        ImGui::Text("Today realized fx pl:       %.2f", pos.today_realized_fx_pl);
+                    }
+                    break;
+                }
+                case TRANSACTION: {
+                    ImGui::Text("TODO: transaction details");
+                    break;
+                }
+            }
+
+            ImGui::EndChild();
+        }
+        ImGui::EndChild();
+    }
+    {
+        ImGui::BeginChild("Bottom", ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y), ImGuiChildFlags_None, ImGuiWindowFlags_None);
+        ImGui::SeparatorText("Chart");
+        ImGui::Text("TODO: chart");
+        ImGui::EndChild();
     }
 }
 
@@ -421,131 +582,6 @@ void render_products() {
     }
 }
 
-void render_portfolio() {
-    {
-        ImGui::BeginChild("Portfolio", ImVec2(ImGui::GetContentRegionAvail().x * 0.6f, ImGui::GetContentRegionAvail().y), ImGuiChildFlags_None, ImGuiWindowFlags_None);
-
-        if (dg.portfolio.count == 0) {
-            ImGui::Text("Portfolio is not yet loaded or empty");
-            if (ImGui::Button("Get portfolio")) {
-                if (!dg_get_portfolio(&dg)) {
-                    fprintf(stderr, "Failed to get portfolio\n");
-                }
-            }
-        } else {
-            static bool show_zero_positions = false;
-            ImGui::Checkbox("Show zero-positions", &show_zero_positions);
-            ImGui::SameLine();
-
-            static bool show_cash = true;
-            ImGui::Checkbox("Cash", &show_cash);
-
-            ImGuiTableFlags table_flags = 0;
-            table_flags |= ImGuiTableFlags_SizingFixedFit;
-            table_flags |= ImGuiTableFlags_NoHostExtendX;
-            table_flags |= ImGuiTableFlags_RowBg;
-            table_flags |= ImGuiTableFlags_BordersOuter;
-            table_flags |= ImGuiTableFlags_BordersV;
-            table_flags |= ImGuiTableFlags_NoBordersInBody;
-            table_flags |= ImGuiTableFlags_ScrollY;
-
-            if (ImGui::BeginTable("transactions", 5, table_flags)) {
-                ImGui::TableSetupColumn("Type");
-                ImGui::TableSetupColumn("#");
-                ImGui::TableSetupColumn("Name");
-                ImGui::TableSetupColumn("Price");
-                ImGui::TableSetupColumn("Value");
-                ImGui::TableSetupScrollFreeze(0, 1);  // Keep header always visible
-                ImGui::TableHeadersRow();
-
-                for (size_t i = 0; i < dg.portfolio.count; ++i) {
-                    dg_position position = dg.portfolio.positions[i];
-                    if (!show_cash && strcmp(position.position_type, "CASH") == 0) continue;
-                    if (!show_zero_positions && position.size == 0) continue;
-
-                    ImGui::PushID(i);
-
-                    dg_product* product = dg_lookup_product_by_id(&dg, atoi(position.id));
-
-                    ImGui::TableNextRow();
-                    ImGui::TableSetColumnIndex(0);
-                    ImGui::Text("%s", position.position_type);
-
-                    ImGui::TableNextColumn();
-                    ImGui::Text("%d", position.size);
-
-                    ImGui::TableNextColumn();
-                    if (strcmp(position.position_type, "CASH") == 0) {
-                        ImGui::Text("%s", position.id);
-                    } else {
-                        ImGui::Text("%s", product->name);
-                    }
-
-                    ImGui::TableNextColumn();
-                    ImGui::Text("%.2f", position.price);
-
-                    ImGui::TableNextColumn();
-                    ImGui::Text("%.2f", position.value);
-
-                    ImGui::PopID();
-                }
-                ImGui::EndTable();
-            }
-        }
-
-        ImGui::EndChild();
-    }
-    ImGui::SameLine();
-    {
-        ImGui::BeginChild("Properties", ImVec2(0, ImGui::GetContentRegionAvail().y), ImGuiChildFlags_None, ImGuiWindowFlags_None);
-        ImGui::SeparatorText("Properties");
-
-        ImGui::EndChild();
-    }
-
-    // if (dg.portfolio.count == 0) {
-    //     ImGui::Text("Portfolio has not been loaded yet");
-    //     if (ImGui::Button("Get portfolio")) {
-    //         if (!dg_get_portfolio(&dg)) {
-    //             fprintf(stderr, "Failed to get portfolio\n");
-    //         }
-    //     }
-    // } else {
-    // for (auto i = 0; i < dg.portfolio.count; i++) {
-    //     dg_position position = dg.portfolio.positions[i];
-
-    //     const dg_product *product = NULL;
-    //     if (strcmp(position.position_type, "PRODUCT") == 0) {
-    //         // product = dg_get_product_info_by_id(&dg, atoi(position.id));
-    //     }
-
-    //     if (show_non_zero_only && position.size <= 0)
-    //         continue;
-    //     if (!show_cash && strcmp(position.position_type, "CASH") == 0)
-    //         continue;
-
-    //     if (ImGui::TreeNode(product ? product->name : position.id)) {
-    //         ImGui::Text("ID:                         %s", position.id);
-    //         ImGui::Text("Position type:              %s", position.position_type);
-    //         ImGui::Text("Size:                       %d", position.size);
-    //         ImGui::Text("Price:                      %.2f", position.price);
-    //         ImGui::Text("Value:                      %.2f", position.value);
-    //         ImGui::Text("Pl base:                    %.2f", position.pl_base);
-    //         ImGui::Text("Today pl base:              %.2f", position.today_pl_base);
-    //         ImGui::Text("Portfolio value correction: %.2f", position.portfolio_value_correction);
-    //         ImGui::Text("Break even price:           %.2f", position.break_even_price);
-    //         ImGui::Text("Average fx rate:            %.2f", position.average_fx_rate);
-    //         ImGui::Text("Realized product pl:        %.2f", position.realized_product_pl);
-    //         ImGui::Text("Realized fx pl:             %.2f", position.realized_fx_pl);
-    //         ImGui::Text("Today realized product pl:  %.2f", position.today_realized_product_pl);
-    //         ImGui::Text("Today realized fx pl:       %.2f", position.today_realized_fx_pl);
-    //         ImGui::TreePop();
-    //     }
-    // }
-    // }
-    // ImGui::End();
-}
-
 /*
 
 void render_product_chart(dg_product_chart chart) {
@@ -669,6 +705,7 @@ void render_transactions() {
                     char* trimmed_date = (char*)malloc(sizeof(char) * 11);
                     strncpy(trimmed_date, t.date, 10);
                     trimmed_date[10] = '\0';
+                    ImGui::AlignTextToFramePadding();
                     if (ImGui::Selectable(trimmed_date, i == selected_ix, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap)) {
                         selected_ix = i;
                     }

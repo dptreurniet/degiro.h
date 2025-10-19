@@ -98,7 +98,7 @@ bool dg__parse_products(cJSON* root, dg_da_products* products) {
     while (product != NULL) {
         dg_product p = {0};
 
-        dg__parse_string_to_int(product, "id", &p.id);
+        dg__parse_string_as_int(product, "id", &p.id);
         dg__parse_string(product, "name", &p.name);
         dg__parse_string(product, "isin", &p.isin);
         dg__parse_string(product, "symbol", &p.symbol);
@@ -106,7 +106,7 @@ bool dg__parse_products(cJSON* root, dg_da_products* products) {
         dg__parse_bool(product, "tradable", &p.tradable);
         dg__parse_string(product, "category", &p.category);
         dg__parse_bool(product, "active", &p.active);
-        dg__parse_string_to_int(product, "exchangeId", &p.exchange_id);
+        dg__parse_string_as_int(product, "exchangeId", &p.exchange_id);
         dg__parse_bool(product, "onlyEodPrices", &p.only_eod_prices);
         dg__parse_order_time_type_flags(product, "orderTimeTypes", &p.order_time_types);
         dg__parse_order_type_flags(product, "buyOrderTypes", &p.buy_order_types);

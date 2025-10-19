@@ -9,9 +9,15 @@
 struct dg_context;
 typedef struct dg_context dg_context;
 
+typedef enum {
+    DG_POSITION_TYPE_PRODUCT,
+    DG_POSITION_TYPE_CASH,
+} dg_position_type;
+
 typedef struct dg_position {
-    char *id;
-    char *position_type;
+    int id;
+    char* cash_id;
+    dg_position_type position_type;
     int size;
     double price;
     double value;
@@ -28,8 +34,8 @@ typedef struct dg_position {
 } dg_position;
 
 typedef struct dg_portfolio {
-    dg_position *positions;
+    dg_position* positions;
     size_t count;
 } dg_portfolio;
 
-bool dg_get_portfolio(dg_context *ctx);
+bool dg_get_portfolio(dg_context* ctx);
