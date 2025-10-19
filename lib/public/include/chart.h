@@ -14,7 +14,10 @@ typedef enum {
     PERIOD_1M,
     PERIOD_6M,
     PERIOD_1Y,
+    PERIOD_3Y,
+    PERIOD_5Y,
     PERIOD_YTD,
+    PERIOD_MAX,
 } dg_chart_period;
 
 typedef struct dg_product_chart_options {

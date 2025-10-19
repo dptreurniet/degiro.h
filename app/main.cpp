@@ -305,6 +305,18 @@ void render_products() {
                 if (ImGui::RadioButton("1Y", options.period == PERIOD_1Y)) {
                     options.period = PERIOD_1Y;
                 }
+                ImGui::SameLine();
+                if (ImGui::RadioButton("3Y", options.period == PERIOD_3Y)) {
+                    options.period = PERIOD_3Y;
+                }
+                ImGui::SameLine();
+                if (ImGui::RadioButton("5Y", options.period == PERIOD_5Y)) {
+                    options.period = PERIOD_5Y;
+                }
+                ImGui::SameLine();
+                if (ImGui::RadioButton("Max", options.period == PERIOD_MAX)) {
+                    options.period = PERIOD_MAX;
+                }
 
                 if (prev_options.period != options.period ||
                     prev_options.product.id != options.product.id) {

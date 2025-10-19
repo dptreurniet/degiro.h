@@ -45,7 +45,11 @@ bool dg__parse_chart_response_time_data(cJSON *item, dg_product_chart *chart) {
     }
 
     time_t time_resolution = 0;
-    if (strcmp(resolution, "1D") == 0)
+    if (strcmp(resolution, "7D") == 0)
+        time_resolution = 60 * 60 * 24 * 7;
+    else if (strcmp(resolution, "3D") == 0)
+        time_resolution = 60 * 60 * 24 * 3;
+    else if (strcmp(resolution, "1D") == 0)
         time_resolution = 60 * 60 * 24;
     else if (strcmp(resolution, "T2H") == 0)
         time_resolution = 60 * 60 * 2;
@@ -183,6 +187,18 @@ bool dg_get_product_info_chart(dg_context *ctx, dg_product_chart_options opts, d
         case PERIOD_1Y:
             nob_sb_appendf(&url, "&period=P1Y");
             nob_sb_appendf(&url, "&resolution=P1D");
+            break;
+        case PERIOD_3Y:
+            nob_sb_appendf(&url, "&period=P3Y");
+            nob_sb_appendf(&url, "&resolution=P3D");
+            break;
+        case PERIOD_5Y:
+            nob_sb_appendf(&url, "&period=P5Y");
+            nob_sb_appendf(&url, "&resolution=P1W");
+            break;
+        case PERIOD_MAX:
+            nob_sb_appendf(&url, "&period=P50Y");
+            nob_sb_appendf(&url, "&resolution=P1W");
             break;
         case PERIOD_YTD: {
             time_t t_now = time(NULL);
