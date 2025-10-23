@@ -10,7 +10,11 @@
 #include <math.h>
 
 #include <iostream>
+#include <map>
 #include <sstream>
+#include <string>
+#include <tuple>
+#include <vector>
 
 #include "implot.h"
 extern "C" {
@@ -78,6 +82,130 @@ void render_login_popup() {
             ImGui::CloseCurrentPopup();
         }
         ImGui::EndPopup();
+    }
+}
+
+void render_portfolio_pie_chart() {
+    typedef enum portfolio_pie_types {
+        PORTFOLIO_PIE_SIZE,
+        PORTFOLIO_PIE_VALUE,
+    } portfolio_pie_types;
+
+    static struct portfolio_pie_options {
+        portfolio_pie_types type = PORTFOLIO_PIE_VALUE;
+        bool include_cash = true;
+        bool show_percentage = true;
+    } options;
+
+    ImGui::AlignTextToFramePadding();
+    ImGui::Text("Property to plot:");
+    ImGui::SameLine();
+    ImGui::RadioButton("Size", (int*)&options.type, PORTFOLIO_PIE_SIZE);
+    ImGui::SameLine();
+    ImGui::RadioButton("Value", (int*)&options.type, PORTFOLIO_PIE_VALUE);
+
+    if (options.type == PORTFOLIO_PIE_VALUE) {
+        ImGui::Checkbox("Show percentages", &options.show_percentage);
+        ImGui::Checkbox("Include cash", &options.include_cash);
+    }
+
+    static std::string label_format;
+    switch (options.type) {
+        case PORTFOLIO_PIE_SIZE:
+            label_format = "%.0f";
+            break;
+        case PORTFOLIO_PIE_VALUE:
+            if (options.show_percentage)
+                label_format = "%.1f";
+            else
+                label_format = "%.2f";
+            break;
+        default:
+            fprintf(stderr, "Missing case\n");
+    }
+
+    if (dg.portfolio.count == 0) {
+        ImGui::Text("Portfolio is not yet loaded or empty");
+    } else {
+        // Determine total portfolio value
+        float portfolio_value = 0.0f;
+        if (options.show_percentage) {
+            for (size_t i = 0; i < dg.portfolio.count; ++i) {
+                // TODO: this line assumes all positions are based in EUR
+                portfolio_value += dg.portfolio.positions[i].value;
+            }
+        }
+
+        std::vector<const char*> labels;
+        std::vector<float> values;
+
+        // Collect non-cash products
+        std::map<int, std::tuple<const char*, float>> products;
+        for (size_t i = 0; i < dg.portfolio.count; ++i) {
+            dg_position position = dg.portfolio.positions[i];
+            if (position.position_type != DG_POSITION_TYPE_PRODUCT) continue;
+            if (position.size == 0) continue;
+            dg_product* product = dg_lookup_product_by_id(&dg, dg.portfolio.positions[i].id);
+
+            labels.push_back(product->symbol);
+            switch (options.type) {
+                case PORTFOLIO_PIE_SIZE:
+                    values.push_back((float)position.size);
+                    break;
+
+                case PORTFOLIO_PIE_VALUE:
+                    values.push_back(position.value);
+                    break;
+
+                default:
+                    fprintf(stderr, "Missing case\n");
+            }
+        }
+
+        // // Collect cash positions
+        if (options.type == PORTFOLIO_PIE_VALUE && options.include_cash) {
+            std::map<std::string, float> currency_values;
+            for (size_t i = 0; i < dg.portfolio.count; ++i) {
+                dg_position position = dg.portfolio.positions[i];
+                if (position.position_type != DG_POSITION_TYPE_CASH) continue;
+
+                std::string id(position.cash_id);
+                if (id.find("FLATEX_") == 0) id = id.substr(7);  // strip prefix FLATEX_
+
+                if (currency_values.find(id) != currency_values.end())
+                    currency_values[id] = position.value;
+                else
+                    currency_values[id] += position.value;
+            }
+
+            for (const auto& [id, value] : currency_values) {
+                if (value < 1e-6) continue;  // Do not include zero-positions
+                labels.push_back(id.c_str());
+                values.push_back(value);
+            }
+        }
+
+        if (options.show_percentage) {
+            for (size_t i = 0; i < values.size(); ++i) values[i] = values[i] / portfolio_value * 100.0f;
+        }
+
+        if (ImPlot::BeginPlot("##portfolio_distribution", ImVec2(ImGui::GetContentRegionAvail().y, ImGui::GetContentRegionAvail().y), ImPlotFlags_Equal | ImPlotFlags_NoMouseText)) {
+            ImPlot::SetupAxes(nullptr, nullptr, ImPlotAxisFlags_NoDecorations, ImPlotAxisFlags_NoDecorations);
+            ImPlot::SetupAxesLimits(0, 1, 0, 1);
+            ImPlot::PlotPieChart(labels.data(), values.data(), labels.size(), 0.5, 0.5, 0.4, label_format.c_str(), 90, ImPlotPieChartFlags_Normalize);
+
+            ImPlot::PushPlotClipRect();
+            ImVec4 style = ImPlot::GetStyle().Colors[ImPlotCol_FrameBg];
+            ImU32 color = (static_cast<ImU32>(style.w) << 24) |
+                          (static_cast<ImU32>(style.x) << 16) |
+                          (static_cast<ImU32>(style.y) << 8) |
+                          (static_cast<ImU32>(style.z));
+            ImVec2 center = ImPlot::PlotToPixels(ImPlotPoint(0.5f, 0.5f));
+            ImPlot::GetPlotDrawList()->AddCircleFilled(center, center.x / 5, color, 20);
+            ImPlot::PopPlotClipRect();
+
+            ImPlot::EndPlot();
+        }
     }
 }
 
@@ -208,15 +336,15 @@ void render_portfolio() {
                         ImGui::Text("Price:                      %.2f", pos.price);
                         ImGui::Text("Value:                      %.2f", pos.value);
                         // TODO: accrued_interest;
-                        ImGui::Text("Pl base:                    %.2f", pos.pl_base);
-                        ImGui::Text("Today pl base:              %.2f", pos.today_pl_base);
+                        ImGui::Text("PL base:                    %.2f", pos.pl_base);
+                        ImGui::Text("Today PL base:              %.2f", pos.today_pl_base);
                         ImGui::Text("Portfolio value correction: %.2f", pos.portfolio_value_correction);
                         ImGui::Text("Break even price:           %.2f", pos.break_even_price);
                         ImGui::Text("Average fx rate:            %.2f", pos.average_fx_rate);
-                        ImGui::Text("Realized_ product_ pl:      %.2f", pos.realized_product_pl);
-                        ImGui::Text("Realized fx pl:             %.2f", pos.realized_fx_pl);
-                        ImGui::Text("Today realized product pl:  %.2f", pos.today_realized_product_pl);
-                        ImGui::Text("Today realized fx pl:       %.2f", pos.today_realized_fx_pl);
+                        ImGui::Text("Realized product PL:        %.2f", pos.realized_product_pl);
+                        ImGui::Text("Realized fx PL:             %.2f", pos.realized_fx_pl);
+                        ImGui::Text("Today realized product PL:  %.2f", pos.today_realized_product_pl);
+                        ImGui::Text("Today realized fx PL:       %.2f", pos.today_realized_fx_pl);
                     }
                     break;
                 }
@@ -233,7 +361,9 @@ void render_portfolio() {
     {
         ImGui::BeginChild("Bottom", ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y), ImGuiChildFlags_None, ImGuiWindowFlags_None);
         ImGui::SeparatorText("Chart");
-        ImGui::Text("TODO: chart");
+
+        render_portfolio_pie_chart();
+
         ImGui::EndChild();
     }
 }
