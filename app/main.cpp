@@ -769,7 +769,6 @@ bool operator!=(const dg_product_chart_options &lhs, const dg_product_chart_opti
 
 */
 void render_transactions() {
-    static dg_transactions transactions = {0};
     static size_t selected_ix = -1;
 
     {  // -------- Transactions list --------
@@ -781,18 +780,18 @@ void render_transactions() {
                 .to_date = {.tm_mday = 1, .tm_year = 200},
                 .group_by_order = true};
 
-            if (!dg_get_transactions(&dg, opts, &transactions)) {
+            if (!dg_get_transactions(&dg, opts)) {
                 fprintf(stderr, "Failed to get transactions\n");
             }
 
-            int ids[transactions.count];
-            for (size_t i = 0; i < transactions.count; ++i) {
-                ids[i] = transactions.items[i].product_id;
+            int ids[dg.transactions.count];
+            for (size_t i = 0; i < dg.transactions.count; ++i) {
+                ids[i] = dg.transactions.items[i].product_id;
             }
-            dg_get_product_infos_info(&dg, ids, transactions.count);
+            dg_get_product_infos_info(&dg, ids, dg.transactions.count);
         }
 
-        if (transactions.items == 0) {
+        if (dg.transactions.items == 0) {
             ImGui::Text("No transactions loaded yet");
         } else {
             ImGuiTableFlags table_flags = 0;
@@ -814,8 +813,8 @@ void render_transactions() {
                 ImGui::TableSetupScrollFreeze(0, 1);  // Keep header always visible
                 ImGui::TableHeadersRow();
 
-                for (size_t i = 0; i < transactions.count; ++i) {
-                    dg_transaction t = transactions.items[i];
+                for (size_t i = 0; i < dg.transactions.count; ++i) {
+                    dg_transaction t = dg.transactions.items[i];
                     ImGui::PushID(i);
 
                     dg_product product = {0};
@@ -842,8 +841,8 @@ void render_transactions() {
                     free(trimmed_date);
 
                     ImGui::TableNextColumn();
-                    const char* buysell = strcmp(t.buysell, "S") == 0 ? " Sold " : "Bought";
-                    if (strcmp(t.buysell, "S") == 0) {
+                    const char* buysell = t.buysell == SELL ? " Sold " : "Bought";
+                    if (t.buysell == SELL) {
                         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(.7, 0, 0, 1));
                         ImGui::Button("Sell", ImVec2(50, 0));
                     } else {
@@ -881,29 +880,40 @@ void render_transactions() {
         if (selected_ix == -1) {
             ImGui::Text("Select a transaction to view its properties");
         } else {
-            dg_transaction t = transactions.items[selected_ix];
-            ImGui::Text("ID:                                   %d", t.id);                                      // int id;
-            ImGui::Text("Product ID:                           %d", t.product_id);                              // int product_id;
-            ImGui::Text("Date:                                 %s", t.date);                                    // char *date;
-            ImGui::Text("Buysell:                              %s", t.buysell);                                 // char *buysell;
-            ImGui::Text("Price:                                %.2f", t.price);                                 // double price;
-            ImGui::Text("Quantity:                             %d", t.quantity);                                // int quantity;
-            ImGui::Text("Total:                                %.2f", t.total);                                 // double total;
-            ImGui::Text("Order type ID:                        %d", t.order_type_id);                           // int order_type_id;
-            ImGui::Text("Counter party:                        %s", t.counter_party);                           // char *counter_party;
-            ImGui::Text("Transfered:                           %s", t.transfered ? "yes" : "no");               // bool transfered;
-            ImGui::Text("Fx rate:                              %d", t.fx_rate);                                 // int fx_rate;
-            ImGui::Text("Nett fx rate:                         %d", t.nett_fx_rate);                            // int nett_fx_rate;
-            ImGui::Text("Gross fx rate:                        %d", t.gross_fx_rate);                           // int gross_fx_rate;
-            ImGui::Text("Auto fx fee in base currency:         %d", t.auto_fx_fee_in_base_currency);            // int auto_fx_fee_in_base_currency;
-            ImGui::Text("Total in base currency:               %.2f", t.total_in_base_currency);                // double total_in_base_currency;
-            ImGui::Text("Fee in base currency:                 %.2f", t.fee_in_base_currency);                  // double fee_in_base_currency;
-            ImGui::Text("Total fees in base currency:          %.2f", t.total_fees_in_base_currency);           // double total_fees_in_base_currency;
-            ImGui::Text("Total plus fee in base currency:      %.2f", t.total_plus_fee_in_base_currency);       // double total_plus_fee_in_base_currency;
-            ImGui::Text("Total plus all fees in base currency: %.2f", t.total_plus_all_fees_in_base_currency);  // double total_plus_all_fees_in_base_currency;
-            ImGui::Text("Transaction type ID:                  %d", t.transaction_type_id);                     // int transaction_type_id;
-            ImGui::Text("Trading venue:                        %s", t.trading_venue);                           // char *trading_venue;
-            ImGui::Text("Executing entity ID:                  %s", t.executing_entity_id);                     // char *executing_entity_id;
+            dg_transaction t = dg.transactions.items[selected_ix];
+
+            std::string counter_party;
+            switch (t.counter_party) {
+                case COUNTERPARTY_MK:
+                    counter_party = "MARKET";
+                    break;
+                default:
+                    counter_party = "???";
+                    fprintf(stderr, "Missing counterparty implementation\n");
+            }
+
+            ImGui::Text("ID:                                   %d", t.id);
+            ImGui::Text("Product ID:                           %d", t.product_id);
+            ImGui::Text("Date:                                 %s", t.date);
+            ImGui::Text("Buysell:                              %s", t.buysell == SELL ? "SELL" : "BUY");
+            ImGui::Text("Price:                                %.2f", t.price);
+            ImGui::Text("Quantity:                             %d", t.quantity);
+            ImGui::Text("Total:                                %.2f", t.total);
+            ImGui::Text("Order type ID:                        %d", t.order_type_id);
+            ImGui::Text("Counter party:                        %s", counter_party.c_str());
+            ImGui::Text("Transfered:                           %s", t.transfered ? "YES" : "NO");
+            ImGui::Text("Fx rate:                              %d", t.fx_rate);
+            ImGui::Text("Nett fx rate:                         %d", t.nett_fx_rate);
+            ImGui::Text("Gross fx rate:                        %d", t.gross_fx_rate);
+            ImGui::Text("Auto fx fee in base currency:         %d", t.auto_fx_fee_in_base_currency);
+            ImGui::Text("Total in base currency:               %.2f", t.total_in_base_currency);
+            ImGui::Text("Fee in base currency:                 %.2f", t.fee_in_base_currency);
+            ImGui::Text("Total fees in base currency:          %.2f", t.total_fees_in_base_currency);
+            ImGui::Text("Total plus fee in base currency:      %.2f", t.total_plus_fee_in_base_currency);
+            ImGui::Text("Total plus all fees in base currency: %.2f", t.total_plus_all_fees_in_base_currency);
+            ImGui::Text("Transaction type ID:                  %d", t.transaction_type_id);
+            ImGui::Text("Trading venue:                        %s", t.trading_venue);
+            ImGui::Text("Executing entity ID:                  %s", t.executing_entity_id);
         }
         ImGui::EndChild();
     }
