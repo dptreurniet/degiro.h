@@ -2,6 +2,7 @@
 
 #include <stdarg.h>
 #include <stdbool.h>
+#include <time.h>
 
 #include "cjson/cJSON.h"
 
@@ -14,3 +15,4 @@ bool dg__parse_int(cJSON* root, const char* json_key, int* destination);
 bool dg__parse_long_long_int(cJSON* root, const char* json_key, long long int* destination);
 bool dg__parse_bool(cJSON* root, const char* json_key, bool* destination);
 bool dg__parse_double(cJSON* root, const char* json_key, double* destination);
+bool dg__parse_datetime(cJSON* root, const char* json_key, struct tm* destination);

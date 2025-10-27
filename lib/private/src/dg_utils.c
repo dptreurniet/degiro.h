@@ -20,6 +20,25 @@ void dg__dump_to_file(const char* str, const char* filename) {
     fclose(file);
 }
 
+bool convert_date_str_to_tm(const char* str, struct tm* dest) {
+    memset(dest, 0, sizeof(struct tm));
+
+    char timezone[10];
+    int offset;
+
+    int ret = sscanf(str, "%d-%d-%dT%d:%d:%d%[+-]%d",
+                     &dest->tm_year, &dest->tm_mon, &dest->tm_mday,
+                     &dest->tm_hour, &dest->tm_min, &dest->tm_sec,
+                     timezone, &offset);
+
+    if (ret != 7) return false;
+
+    dest->tm_year -= 1900;
+    dest->tm_mon -= 1;
+
+    return true;
+}
+
 const char* dg__format_string(const char* format, ...) {
     va_list args;
 
@@ -158,6 +177,24 @@ bool dg__parse_double(cJSON* root, const char* json_key, double* destination) {
     }
 
     return true;
+}
+
+bool dg__parse_datetime(cJSON* root, const char* json_key, struct tm* destination) {
+    cJSON* obj = cJSON_GetObjectItem(root, json_key);
+    if (!obj) {
+        // nob_log(NOB_WARNING, "Tried to parse \"%s\", but it does not exist", json_key);
+        return false;
+    }
+
+    char* str;
+    if (cJSON_IsString(obj) && (obj->valuestring != NULL)) {
+        str = strdup(obj->valuestring);
+    } else {
+        nob_log(NOB_WARNING, "Tried to parse \"%s\" as string, but it is %s", json_key, cJSON_GetTypeString(obj));
+        return false;
+    }
+
+    return convert_date_str_to_tm(str, destination);
 }
 
 bool is_only_numbers(const char* str) {

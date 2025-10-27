@@ -25,7 +25,7 @@ bool dg__parse_buysell(cJSON* root, const char* key, dg_buysell* destination) {
     return false;
 }
 
-bool dg__parse_counterparty(cJSON* root, const char* key, dg_buysell* destination) {
+bool dg__parse_counterparty(cJSON* root, const char* key, dg_counterparty* destination) {
     char* str;
     dg__parse_string(root, key, &str);
     if (strcmp(str, "MK") == 0) {
@@ -57,7 +57,7 @@ bool dg__parse_transactions(dg_context* ctx, dg_da_transactions* transactions) {
 
         dg__parse_int(item, "id", &t.id);
         dg__parse_int(item, "productId", &t.product_id);
-        dg__parse_string(item, "date", &t.date);
+        dg__parse_datetime(item, "date", &t.date);
         dg__parse_buysell(item, "buysell", &t.buysell);
         dg__parse_double(item, "price", &t.price);
         dg__parse_int(item, "quantity", &t.quantity);

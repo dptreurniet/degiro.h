@@ -2,6 +2,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <time.h>
 
 #include "types.h"
 
@@ -27,7 +28,7 @@ typedef enum {
 typedef struct dg_transaction {
     int id;
     int product_id;
-    char* date;
+    struct tm date;
     dg_buysell buysell;
     double price;
     int quantity;
