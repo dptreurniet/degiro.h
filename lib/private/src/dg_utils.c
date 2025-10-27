@@ -31,7 +31,10 @@ bool convert_date_str_to_tm(const char* str, struct tm* dest) {
                      &dest->tm_hour, &dest->tm_min, &dest->tm_sec,
                      timezone, &offset);
 
-    if (ret != 7) return false;
+    if (ret != 8) {
+        nob_log(NOB_WARNING, "Failed to convert date string to struct tm (ret: %d)", ret);
+        return false;
+    }
 
     dest->tm_year -= 1900;
     dest->tm_mon -= 1;

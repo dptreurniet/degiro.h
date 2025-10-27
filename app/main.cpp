@@ -831,14 +831,12 @@ void render_transactions() {
 
                     ImGui::TableNextRow();
                     ImGui::TableSetColumnIndex(0);
-                    char* trimmed_date = (char*)malloc(sizeof(char) * 11);
-                    strncpy(trimmed_date, t.date, 10);
-                    trimmed_date[10] = '\0';
                     ImGui::AlignTextToFramePadding();
-                    if (ImGui::Selectable(trimmed_date, i == selected_ix, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap)) {
+                    char date_str[11];
+                    snprintf(date_str, sizeof(date_str), "%d-%02d-%02d", t.date.tm_year + 1900, t.date.tm_mon + 1, t.date.tm_mday);
+                    if (ImGui::Selectable(date_str, i == selected_ix, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap)) {
                         selected_ix = i;
                     }
-                    free(trimmed_date);
 
                     ImGui::TableNextColumn();
                     const char* buysell = t.buysell == SELL ? " Sold " : "Bought";
@@ -894,7 +892,7 @@ void render_transactions() {
 
             ImGui::Text("ID:                                   %d", t.id);
             ImGui::Text("Product ID:                           %d", t.product_id);
-            ImGui::Text("Date:                                 %s", t.date);
+            ImGui::Text("Date:                                 %d-%02d-%02d %02d:%02d:%02d", t.date.tm_year + 1900, t.date.tm_mon + 1, t.date.tm_mday, t.date.tm_hour, t.date.tm_min, t.date.tm_sec);
             ImGui::Text("Buysell:                              %s", t.buysell == SELL ? "SELL" : "BUY");
             ImGui::Text("Price:                                %.2f", t.price);
             ImGui::Text("Quantity:                             %d", t.quantity);
